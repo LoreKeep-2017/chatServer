@@ -2,7 +2,6 @@ package chat
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 
@@ -47,13 +46,7 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 }
 
 func (o *Operator) sendAllClients(c map[int]*Client) {
-	select {
-	case o.freeClientCh <- &c:
-	default:
-		o.server.DelOperator(o)
-		err := fmt.Errorf("operator %d is disconnected.", o.id)
-		o.server.Err(err)
-	}
+	o.freeClientCh <- &c
 }
 
 // Listen Write and Read request via chanel
