@@ -5,10 +5,11 @@ import (
 	"log"
 )
 
-// Error codes
+// Operator methods
 const (
-	GetAllTickets = 0
-	GrabClient    = 1
+	actionGetAllClients = "getAllClients"
+	actionCreateRoom    = "createRoom"
+	actionDeleteRoom    = "deleteRoom"
 )
 
 // CheckError checks errors and print log

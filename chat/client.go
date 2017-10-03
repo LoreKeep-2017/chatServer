@@ -120,8 +120,8 @@ func (c *Client) listenRead() {
 			}
 			log.Println(msg)
 			switch msg.Action {
-			case "1":
-				log.Println("1")
+			case actionSendMessage:
+				log.Println(actionSendMessage)
 				var message ClientSendMessageRequest
 				err := json.Unmarshal(msg.RawData, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {

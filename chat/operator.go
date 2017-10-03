@@ -116,11 +116,11 @@ func (o *Operator) listenRead() {
 			}
 			log.Println(msg)
 			switch msg.Action {
-			case "1":
-				log.Println("1")
+			case actionGetAllClients:
+				log.Println(actionGetAllClients)
 				websocket.JSON.Send(o.ws, o.server.clients)
-			case "2":
-				log.Println("2")
+			case actionCreateRoom:
+				log.Println(actionCreateRoom)
 				var cid OperatorGrabb
 				err := json.Unmarshal(msg.RawData, &cid)
 				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
@@ -128,8 +128,8 @@ func (o *Operator) listenRead() {
 				}
 				log.Println(cid)
 				o.server.CreateRoom(cid.Id, o)
-			case "3":
-				log.Println("3")
+			case actionSendMessage:
+				log.Println(actionSendMessage)
 				var message Message
 				err := json.Unmarshal(msg.RawData, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
