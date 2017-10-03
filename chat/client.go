@@ -111,7 +111,8 @@ func (c *Client) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var msg ClientRequest
+			//var msg ClientRequest
+			var msg RequestMessage
 			err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				c.doneCh <- true
@@ -123,8 +124,8 @@ func (c *Client) listenRead() {
 			case actionSendMessage:
 				log.Println(actionSendMessage)
 				var message ClientSendMessageRequest
-				err := json.Unmarshal(msg.RawData, &message)
-				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
+				err := json.Unmarshal(msg.Body, &message)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					return
 				}
 				if c.room != nil {

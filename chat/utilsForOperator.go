@@ -1,15 +1,11 @@
 package chat
 
-import (
-	"encoding/json"
-	"log"
-)
+import "log"
 
 // Operator methods
 const (
 	actionGetAllClients = "getAllClients"
 	actionCreateRoom    = "createRoom"
-	actionDeleteRoom    = "deleteRoom"
 )
 
 // CheckError checks errors and print log
@@ -25,11 +21,6 @@ func CheckError(err error, message string, fatal bool) bool {
 }
 
 //// Operator messages
-
-type OperatorRequest struct {
-	Action  string          `json:"action"`
-	RawData json.RawMessage `json:"data,omitempty"`
-}
 
 type OperatorResponseAddToRoom struct {
 	Action string `json:"action"`

@@ -100,7 +100,8 @@ func (o *Operator) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var msg OperatorRequest
+			//var msg OperatorRequest
+			var msg RequestMessage
 			err := websocket.JSON.Receive(o.ws, &msg)
 			if err == io.EOF {
 				o.doneCh <- true
@@ -115,17 +116,19 @@ func (o *Operator) listenRead() {
 			case actionCreateRoom:
 				log.Println(actionCreateRoom)
 				var cid OperatorGrabb
-				err := json.Unmarshal(msg.RawData, &cid)
-				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
+				err := json.Unmarshal(msg.Body, &cid)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					return
 				}
 				log.Println(cid)
 				o.server.CreateRoom(cid.Id, o)
+
+				//отправка сообщения
 			case actionSendMessage:
 				log.Println(actionSendMessage)
 				var message Message
-				err := json.Unmarshal(msg.RawData, &message)
-				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
+				err := json.Unmarshal(msg.Body, &message)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					return
 				}
 				log.Println(message)
@@ -136,6 +139,11 @@ func (o *Operator) listenRead() {
 					msg := ClientGreetingResponse{"404", "room not found:)"}
 					websocket.JSON.Send(o.ws, msg)
 				}
+
+				//закрытие комнаты
+			case actionCloseRoom:
+				log.Println(actionCloseRoom)
+				//var message Message
 
 			}
 
