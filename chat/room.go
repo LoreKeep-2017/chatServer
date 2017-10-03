@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"encoding/json"
 	"log"
 
 	"golang.org/x/net/websocket"
@@ -32,7 +33,7 @@ func NewRoom(client *Client, operator *Operator) *Room {
 
 	roomId++
 	ch := make(chan Message, roomChannelBufSize)
-	messages := make([]Message, 10)
+	messages := make([]Message, 0)
 
 	return &Room{roomId, ch, client, operator, messages}
 }
@@ -48,19 +49,13 @@ func (r *Room) listenWrite() {
 	for {
 		select {
 
-		// send message to the client
+		// отправка сообщений участникам комнаты
 		case msg := <-r.channelForMessage:
 			r.messages = append(r.messages, msg)
-			log.Println(msg)
-			//отправка сообщений
-			//TODO: добавить этот функционал в модели клиента и сервера
-			if msg.Author == "client" {
-				log.Println("to operator")
-				websocket.JSON.Send(r.operator.ws, msg)
-			} else {
-				log.Println("to client")
-				websocket.JSON.Send(r.client.ws, msg)
-			}
+			messages, _ := json.Marshal(r.messages)
+			msg1 := ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: messages}
+			websocket.JSON.Send(r.operator.ws, msg1)
+			websocket.JSON.Send(r.client.ws, msg1)
 
 		}
 	}

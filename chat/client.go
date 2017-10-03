@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -89,8 +90,11 @@ func (c *Client) listenWrite() {
 		case r := <-c.addRoomCh:
 			log.Println("add room to client")
 			c.room = r
-			msg := ClientGreetingResponse{"grabing", "ROOM create hello:)"}
+			msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
 			websocket.JSON.Send(c.ws, msg)
+			//
+			// msg := ClientGreetingResponse{"grabing", "ROOM create hello:)"}
+			// websocket.JSON.Send(c.ws, msg)
 
 		}
 
@@ -111,7 +115,8 @@ func (c *Client) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var msg ClientRequest
+			//var msg ClientRequest
+			var msg RequestMessage
 			err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				c.doneCh <- true
@@ -120,19 +125,20 @@ func (c *Client) listenRead() {
 			}
 			log.Println(msg)
 			switch msg.Action {
-			case "1":
-				log.Println("1")
+			case actionSendMessage:
+				log.Println(actionSendMessage)
 				var message ClientSendMessageRequest
-				err := json.Unmarshal(msg.RawData, &message)
-				if !CheckError(err, "Invalid RawData"+string(msg.RawData), false) {
-					return
+				err := json.Unmarshal(msg.Body, &message)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Invalid Request", Code: 403}
+					websocket.JSON.Send(c.ws, msg)
 				}
 				if c.room != nil {
-					sending := Message{"client", message.Msg, c.room.id}
+					sending := Message{msg.Type, message.Msg, c.room.id, int(time.Now().Unix())}
 					log.Println(sending)
 					c.room.channelForMessage <- sending
 				} else {
-					msg := ClientGreetingResponse{"404", "room not found:)"}
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
 					websocket.JSON.Send(c.ws, msg)
 				}
 			case "2":
