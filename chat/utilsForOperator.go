@@ -23,12 +23,11 @@ func CheckError(err error, message string, fatal bool) bool {
 //// Operator messages
 
 type OperatorResponseAddToRoom struct {
-	Action string `json:"action"`
-	Room   int    `json:"room"`
+	Room int `json:"roomID"`
 }
 
-type OperatorGrabb struct {
-	Id string `json:"cid"`
+type RequestCreateRoom struct {
+	ID int `json:"cid"`
 }
 
 type OperatorSendMessage struct {

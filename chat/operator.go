@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -19,7 +20,7 @@ type Operator struct {
 	server       *Server
 	rooms        map[int]*Room
 	ch           chan *Message
-	freeClientCh chan *map[int]*Client
+	freeClientCh chan bool
 	doneCh       chan bool
 	addToRoomCh  chan *Room
 }
@@ -38,15 +39,16 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 	operatorId++
 	rooms := make(map[int]*Room)
 	ch := make(chan *Message, channelBufSize)
-	freeClientCh := make(chan *map[int]*Client, channelBufSize)
+	freeClientCh := make(chan bool, channelBufSize)
 	doneCh := make(chan bool)
 	addToRoomCh := make(chan *Room, channelBufSize)
 
 	return &Operator{operatorId, ws, server, rooms, ch, freeClientCh, doneCh, addToRoomCh}
 }
 
-func (o *Operator) sendAllClients(c map[int]*Client) {
-	o.freeClientCh <- &c
+func (o *Operator) sendAllClients() {
+	o.freeClientCh <- true
+
 }
 
 // Listen Write and Read request via chanel
@@ -63,19 +65,27 @@ func (o *Operator) listenWrite() {
 
 		// send message to the client
 		case msg := <-o.ch:
-			log.Println("Send:", msg)
-			websocket.JSON.Send(o.ws, msg)
+			//log.Println("Send:", msg)
+			//websocket.JSON.Send(o.ws, msg)
+			messages, _ := json.Marshal(msg)
+			msg1 := ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: messages}
+			websocket.JSON.Send(o.ws, msg1)
 
 		// send  all free clients
-		case msg := <-o.freeClientCh:
-			log.Println("Send:", msg)
-			websocket.JSON.Send(o.ws, msg)
+		case send := <-o.freeClientCh:
+			if send {
+				jsonstring, _ := json.Marshal(o.server.clients)
+				msg1 := ResponseMessage{Action: actionGetAllClients, Status: "OK", Code: 200, Body: jsonstring}
+				websocket.JSON.Send(o.ws, msg1)
+			}
 
 		// adding to room
 		case room := <-o.addToRoomCh:
 			o.rooms[room.id] = room
-			response := OperatorResponseAddToRoom{"add to room", room.id}
-			websocket.JSON.Send(o.ws, response)
+			response := OperatorResponseAddToRoom{room.id}
+			jsonstring, _ := json.Marshal(response)
+			msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200, Body: jsonstring}
+			websocket.JSON.Send(o.ws, msg)
 
 		// receive done request
 		case <-o.doneCh:
@@ -100,7 +110,6 @@ func (o *Operator) listenRead() {
 
 		// read data from websocket connection
 		default:
-			//var msg OperatorRequest
 			var msg RequestMessage
 			err := websocket.JSON.Receive(o.ws, &msg)
 			if err == io.EOF {
@@ -108,39 +117,53 @@ func (o *Operator) listenRead() {
 			} else if err != nil {
 				o.server.Err(err)
 			}
-			log.Println(msg)
 			switch msg.Action {
+
+			//получение всех клиентов
 			case actionGetAllClients:
 				log.Println(actionGetAllClients)
-				websocket.JSON.Send(o.ws, o.server.clients)
+				jsonstring, _ := json.Marshal(o.server.clients)
+				msg := ResponseMessage{Action: actionGetAllClients, Status: "OK", Code: 200, Body: jsonstring}
+				websocket.JSON.Send(o.ws, msg)
+
+			//создание комнаты
 			case actionCreateRoom:
 				log.Println(actionCreateRoom)
-				var cid OperatorGrabb
+				var cid RequestCreateRoom
 				err := json.Unmarshal(msg.Body, &cid)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					return
+					msg := ResponseMessage{Action: actionCreateRoom, Status: "Invalid Request", Code: 403}
+					websocket.JSON.Send(o.ws, msg)
+					//return
 				}
-				log.Println(cid)
-				o.server.CreateRoom(cid.Id, o)
+				msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
+				websocket.JSON.Send(o.ws, msg)
+				o.server.CreateRoom(cid.ID, o)
 
-				//отправка сообщения
+			//отправка сообщения
 			case actionSendMessage:
 				log.Println(actionSendMessage)
 				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					return
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Invalid Request", Code: 403}
+					websocket.JSON.Send(o.ws, msg)
+					//return
 				}
-				log.Println(message)
+				message.Time = int(time.Now().Unix())
+				message.Author = msg.Type
 				room, ok := o.rooms[message.Room]
 				if ok {
+					// messages, _ := json.Marshal(room.messages)
+					// msg := ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: messages}
+					// websocket.JSON.Send(o.ws, msg)
 					room.channelForMessage <- message
 				} else {
-					msg := ClientGreetingResponse{"404", "room not found:)"}
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
 					websocket.JSON.Send(o.ws, msg)
 				}
 
-				//закрытие комнаты
+			//закрытие комнаты
 			case actionCloseRoom:
 				log.Println(actionCloseRoom)
 				//var message Message

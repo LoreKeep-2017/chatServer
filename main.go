@@ -11,7 +11,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 
 	// websocket server
-	server := chat.NewServer("/entry")
+	server := chat.NewServer()
 	go server.Listen()
 
 	// static files

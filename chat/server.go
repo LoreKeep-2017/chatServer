@@ -3,15 +3,17 @@ package chat
 import (
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 
 	"golang.org/x/net/websocket"
 )
 
+const (
+	operatorHandlerPattern = "/api/v1/operator"
+	clientHandlerPattern   = "/api/v1/client"
+)
+
 // Chat server.
 type Server struct {
-	pattern string
 	//сообщения
 	messages []*Message
 	//типы пользователей
@@ -35,7 +37,7 @@ type Server struct {
 }
 
 // Create new chat server.
-func NewServer(pattern string) *Server {
+func NewServer() *Server {
 	messages := []*Message{}
 	clients := make(map[int]*Client)
 	operators := make(map[int]*Operator)
@@ -51,7 +53,6 @@ func NewServer(pattern string) *Server {
 	errCh := make(chan error)
 
 	return &Server{
-		pattern,
 		messages,
 		clients,
 		operators,
@@ -84,14 +85,8 @@ func (s *Server) DelOperator(o *Operator) {
 	s.delOCh <- o
 }
 
-func (s *Server) CreateRoom(cid string, operator *Operator) {
-	id, err := strconv.Atoi(cid)
-	if err != nil {
-		// handle error
-		log.Println(err)
-		os.Exit(2)
-	}
-	if client, ok := s.clients[id]; ok {
+func (s *Server) CreateRoom(cid int, operator *Operator) {
+	if client, ok := s.clients[cid]; ok {
 		//do something here
 		room := make(map[*Client]*Operator)
 		s.delCh <- client
@@ -120,7 +115,7 @@ func (s *Server) sendPastMessages(c *Client) {
 }
 
 func (s *Server) sendAllClients(o *Operator) {
-	o.sendAllClients(s.clients)
+	o.sendAllClients()
 }
 
 func (s *Server) sendAll(msg *Message) {
@@ -132,7 +127,7 @@ func (s *Server) sendAll(msg *Message) {
 func (s *Server) broadcastFreeClients() {
 	for _, operator := range s.operators {
 		log.Println("sendAllfreeClinets")
-		operator.sendAllClients(s.clients)
+		operator.sendAllClients()
 	}
 }
 
@@ -169,8 +164,8 @@ func (s *Server) Listen() {
 		s.AddOperator(operator)
 		operator.Listen()
 	}
-	http.Handle(s.pattern, websocket.Handler(onConnected))
-	http.Handle("/operator", websocket.Handler(onConnectedOperator))
+	http.Handle(clientHandlerPattern, websocket.Handler(onConnected))
+	http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
 	log.Println("Created handlers")
 
 	for {
@@ -212,12 +207,6 @@ func (s *Server) Listen() {
 				s.rooms[client] = room
 				room.Listen()
 			}
-
-		// broadcast message for all clients
-		// case msg := <-s.sendAllCh:
-		// 	log.Println("Send all:", msg)
-		// 	s.messages = append(s.messages, msg)
-		// 	s.sendAll(msg)
 
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())
