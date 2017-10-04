@@ -15,14 +15,14 @@ var operatorId int = 0
 
 // Chat operator.
 type Operator struct {
-	id           int
-	ws           *websocket.Conn
-	server       *Server
-	rooms        map[int]*Room
-	ch           chan *Message
-	freeClientCh chan bool
-	doneCh       chan bool
-	addToRoomCh  chan *Room
+	id             int
+	ws             *websocket.Conn
+	server         *Server
+	rooms          map[int]*Room
+	ch             chan *Message
+	sendAllRoomsCh chan bool
+	doneCh         chan bool
+	addToRoomCh    chan *Room
 }
 
 // Create new chat operator.
@@ -39,15 +39,15 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 	operatorId++
 	rooms := make(map[int]*Room)
 	ch := make(chan *Message, channelBufSize)
-	freeClientCh := make(chan bool, channelBufSize)
+	sendAllRoomsCh := make(chan bool, channelBufSize)
 	doneCh := make(chan bool)
 	addToRoomCh := make(chan *Room, channelBufSize)
 
-	return &Operator{operatorId, ws, server, rooms, ch, freeClientCh, doneCh, addToRoomCh}
+	return &Operator{operatorId, ws, server, rooms, ch, sendAllRoomsCh, doneCh, addToRoomCh}
 }
 
-func (o *Operator) sendAllClients() {
-	o.freeClientCh <- true
+func (o *Operator) sendAllRooms() {
+	o.sendAllRoomsCh <- true
 
 }
 
@@ -65,24 +65,23 @@ func (o *Operator) listenWrite() {
 
 		// send message to the client
 		case msg := <-o.ch:
-			//log.Println("Send:", msg)
-			//websocket.JSON.Send(o.ws, msg)
 			messages, _ := json.Marshal(msg)
 			msg1 := ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: messages}
 			websocket.JSON.Send(o.ws, msg1)
 
-		// send  all free clients
-		case send := <-o.freeClientCh:
+		// send  all rooms
+		case send := <-o.sendAllRoomsCh:
 			if send {
-				jsonstring, _ := json.Marshal(o.server.clients)
-				msg1 := ResponseMessage{Action: actionGetAllClients, Status: "OK", Code: 200, Body: jsonstring}
+				response := OperatorResponseRooms{o.server.rooms, len(o.server.rooms)}
+				jsonstring, _ := json.Marshal(response)
+				msg1 := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring}
 				websocket.JSON.Send(o.ws, msg1)
 			}
 
 		// adding to room
 		case room := <-o.addToRoomCh:
-			o.rooms[room.id] = room
-			response := OperatorResponseAddToRoom{room.id}
+			o.rooms[room.Id] = room
+			response := OperatorResponseAddToRoom{room.Id}
 			jsonstring, _ := json.Marshal(response)
 			msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200, Body: jsonstring}
 			websocket.JSON.Send(o.ws, msg)
@@ -120,10 +119,13 @@ func (o *Operator) listenRead() {
 			switch msg.Action {
 
 			//получение всех клиентов
-			case actionGetAllClients:
-				log.Println(actionGetAllClients)
-				jsonstring, _ := json.Marshal(o.server.clients)
-				msg := ResponseMessage{Action: actionGetAllClients, Status: "OK", Code: 200, Body: jsonstring}
+			case actionGetAllRooms:
+				log.Println(actionGetAllRooms)
+				//jsonstring, _ := json.Marshal(o.server.rooms)
+				response := OperatorResponseRooms{o.server.rooms, len(o.server.rooms)}
+				jsonstring1, _ := json.Marshal(response)
+				log.Println(jsonstring1)
+				msg := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring1}
 				websocket.JSON.Send(o.ws, msg)
 
 			//создание комнаты
@@ -138,7 +140,7 @@ func (o *Operator) listenRead() {
 				}
 				msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
 				websocket.JSON.Send(o.ws, msg)
-				o.server.CreateRoom(cid.ID, o)
+				//o.server.CreateRoom(cid.ID, o)
 
 			//отправка сообщения
 			case actionSendMessage:

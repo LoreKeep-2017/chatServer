@@ -4,8 +4,8 @@ import "log"
 
 // Operator methods
 const (
-	actionGetAllClients = "getAllClients"
-	actionCreateRoom    = "createRoom"
+	actionGetAllRooms = "getAllRooms"
+	actionCreateRoom  = "createRoom"
 )
 
 // CheckError checks errors and print log
@@ -24,6 +24,11 @@ func CheckError(err error, message string, fatal bool) bool {
 
 type OperatorResponseAddToRoom struct {
 	Room int `json:"roomID"`
+}
+
+type OperatorResponseRooms struct {
+	Room []Room `json:"rooms"`
+	Size int    `json:"size"`
 }
 
 type RequestCreateRoom struct {

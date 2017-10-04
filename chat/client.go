@@ -28,7 +28,7 @@ type Client struct {
 }
 
 // Create new chat client.
-func NewClient(ws *websocket.Conn, server *Server, nick string) *Client {
+func NewClient(ws *websocket.Conn, server *Server, nick string, room *Room) *Client {
 
 	if ws == nil {
 		panic("ws cannot be nil")
@@ -43,7 +43,7 @@ func NewClient(ws *websocket.Conn, server *Server, nick string) *Client {
 	doneCh := make(chan bool)
 	addRoomCh := make(chan *Room)
 	delRoomCh := make(chan *Room)
-	return &Client{maxId, nick, ws, server, nil, ch, doneCh, addRoomCh, delRoomCh}
+	return &Client{maxId, nick, ws, server, room, ch, doneCh, addRoomCh, delRoomCh}
 }
 
 func (c *Client) Conn() *websocket.Conn {
@@ -134,15 +134,25 @@ func (c *Client) listenRead() {
 					websocket.JSON.Send(c.ws, msg)
 				}
 				if c.room != nil {
-					sending := Message{msg.Type, message.Msg, c.room.id, int(time.Now().Unix())}
+					sending := Message{msg.Type, message.Msg, c.room.Id, int(time.Now().Unix())}
 					log.Println(sending)
 					c.room.channelForMessage <- sending
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
 					websocket.JSON.Send(c.ws, msg)
 				}
-			case "2":
-				log.Println("2")
+			case actionSendDescriptionRoom:
+				log.Println(actionSendDescriptionRoom)
+				var roomDescription ClientSendDescriptionRoomRequest
+				err := json.Unmarshal(msg.Body, &roomDescription)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "Invalid Request", Code: 403}
+					websocket.JSON.Send(c.ws, msg)
+				} else {
+					c.room.channelForDescription <- roomDescription
+					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200}
+					websocket.JSON.Send(c.ws, msg)
+				}
 			}
 		}
 	}

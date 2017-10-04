@@ -17,9 +17,8 @@ type Server struct {
 	//сообщения
 	messages []*Message
 	//типы пользователей
-	clients   map[int]*Client
 	operators map[int]*Operator
-	rooms     map[*Client]*Room
+	rooms     []Room
 	//операции
 	//клиент
 	addCh chan *Client
@@ -28,7 +27,7 @@ type Server struct {
 	addOCh chan *Operator
 	delOCh chan *Operator
 	//комнаты
-	addRoomCh chan map[*Client]*Operator
+	addRoomCh chan map[Client]Operator
 	delRoomCh chan *Client
 	//остальное
 	sendAllCh chan *Message
@@ -39,14 +38,13 @@ type Server struct {
 // Create new chat server.
 func NewServer() *Server {
 	messages := []*Message{}
-	clients := make(map[int]*Client)
 	operators := make(map[int]*Operator)
-	rooms := make(map[*Client]*Room)
+	rooms := make([]Room, 0)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
 	addOCh := make(chan *Operator)
 	delOCh := make(chan *Operator)
-	addRoomCh := make(chan map[*Client]*Operator)
+	addRoomCh := make(chan map[Client]Operator)
 	delRoomCh := make(chan *Client)
 	sendAllCh := make(chan *Message)
 	doneCh := make(chan bool)
@@ -54,7 +52,6 @@ func NewServer() *Server {
 
 	return &Server{
 		messages,
-		clients,
 		operators,
 		rooms,
 		addCh,
@@ -85,21 +82,6 @@ func (s *Server) DelOperator(o *Operator) {
 	s.delOCh <- o
 }
 
-func (s *Server) CreateRoom(cid int, operator *Operator) {
-	if client, ok := s.clients[cid]; ok {
-		//do something here
-		room := make(map[*Client]*Operator)
-		s.delCh <- client
-		room[client] = operator
-		s.addRoomCh <- room
-	}
-
-}
-
-func (s *Server) SendAll(msg *Message) {
-	s.sendAllCh <- msg
-}
-
 func (s *Server) Done() {
 	s.doneCh <- true
 }
@@ -108,26 +90,14 @@ func (s *Server) Err(err error) {
 	s.errCh <- err
 }
 
-func (s *Server) sendPastMessages(c *Client) {
-	for _, msg := range s.messages {
-		c.Write(msg)
-	}
+func (s *Server) sendAllRooms(o *Operator) {
+	o.sendAllRooms()
 }
 
-func (s *Server) sendAllClients(o *Operator) {
-	o.sendAllClients()
-}
-
-func (s *Server) sendAll(msg *Message) {
-	for _, c := range s.clients {
-		c.Write(msg)
-	}
-}
-
-func (s *Server) broadcastFreeClients() {
+func (s *Server) broadcastRooms() {
 	for _, operator := range s.operators {
-		log.Println("sendAllfreeClinets")
-		operator.sendAllClients()
+		log.Println("sendAllRooms")
+		operator.sendAllRooms()
 	}
 }
 
@@ -146,8 +116,12 @@ func (s *Server) Listen() {
 			}
 		}()
 
-		client := NewClient(ws, s, "nick")
+		room := NewRoom()
+		client := NewClient(ws, s, "nick", room)
+		room.Client = client
+		s.rooms = append(s.rooms, *room)
 		s.Add(client)
+		room.Listen()
 		client.Listen()
 	}
 
@@ -172,41 +146,26 @@ func (s *Server) Listen() {
 		select {
 
 		// Add new a client
-		case c := <-s.addCh:
+		case <-s.addCh:
 			log.Println("Added new client")
-			s.clients[c.Id] = c
-			log.Println("Now", len(s.clients), "clients connected.")
-			s.broadcastFreeClients()
+			s.broadcastRooms()
 
 		// del a client
-		case c := <-s.delCh:
+		case <-s.delCh:
 			log.Println("Delete client")
-			delete(s.clients, c.Id)
-			s.broadcastFreeClients()
+			s.broadcastRooms()
 
 		// Add new a operator
 		case o := <-s.addOCh:
 			log.Println("Added new operator")
 			s.operators[o.id] = o
 			log.Println("Now", len(s.operators), "operators connected.")
-			s.sendAllClients(o)
+			s.sendAllRooms(o)
 
 		// del a operator
 		case o := <-s.delOCh:
 			log.Println("Delete operator")
 			delete(s.operators, o.id)
-
-		//Create room
-		case clientOperator := <-s.addRoomCh:
-			for client, operator := range clientOperator {
-				log.Println("Creating new room")
-				room := NewRoom(client, operator)
-				operator.addToRoomCh <- room
-				client.addRoomCh <- room
-				log.Println(room)
-				s.rooms[client] = room
-				room.Listen()
-			}
 
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())
