@@ -33,7 +33,7 @@ type OperatorResponseRooms struct {
 }
 
 type RequestActionWithRoom struct {
-	ID int `json:"cid"`
+	ID int `json:"rid"`
 }
 
 type OperatorSendMessage struct {

@@ -2,7 +2,6 @@ package chat
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"time"
@@ -21,7 +20,7 @@ type Client struct {
 	ws        *websocket.Conn
 	server    *Server
 	room      *Room
-	ch        chan *Message
+	ch        chan ResponseMessage
 	doneCh    chan bool
 	addRoomCh chan *Room
 	delRoomCh chan *Room
@@ -39,7 +38,7 @@ func NewClient(ws *websocket.Conn, server *Server, nick string, room *Room) *Cli
 	}
 
 	maxId++
-	ch := make(chan *Message, channelBufSize)
+	ch := make(chan ResponseMessage, channelBufSize)
 	doneCh := make(chan bool)
 	addRoomCh := make(chan *Room)
 	delRoomCh := make(chan *Room)
@@ -48,16 +47,6 @@ func NewClient(ws *websocket.Conn, server *Server, nick string, room *Room) *Cli
 
 func (c *Client) Conn() *websocket.Conn {
 	return c.ws
-}
-
-func (c *Client) Write(msg *Message) {
-	select {
-	case c.ch <- msg:
-	default:
-		c.server.Del(c)
-		err := fmt.Errorf("client %d is disconnected.", c.Id)
-		c.server.Err(err)
-	}
 }
 
 func (c *Client) Done() {
@@ -78,7 +67,7 @@ func (c *Client) listenWrite() {
 
 		// send message to the client
 		case msg := <-c.ch:
-			log.Println("Send:", msg)
+			log.Println("Send:", msg, c.ws)
 			websocket.JSON.Send(c.ws, msg)
 
 		// receive done request
@@ -127,16 +116,17 @@ func (c *Client) listenRead() {
 			switch msg.Action {
 			case actionSendMessage:
 				log.Println(actionSendMessage)
-				var message ClientSendMessageRequest
+				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Invalid Request", Code: 403}
-					websocket.JSON.Send(c.ws, msg)
+					c.ch <- msg
 				}
 				if c.room != nil {
-					sending := Message{msg.Type, message.Msg, c.room.Id, int(time.Now().Unix())}
-					log.Println(sending)
-					c.room.channelForMessage <- sending
+					message.Author = "client"
+					message.Room = c.room.Id
+					message.Time = int(time.Now().Unix())
+					c.room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
 					websocket.JSON.Send(c.ws, msg)
@@ -147,11 +137,11 @@ func (c *Client) listenRead() {
 				err := json.Unmarshal(msg.Body, &roomDescription)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "Invalid Request", Code: 403}
-					websocket.JSON.Send(c.ws, msg)
+					c.ch <- msg
 				} else {
 					c.room.channelForDescription <- roomDescription
 					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200}
-					websocket.JSON.Send(c.ws, msg)
+					c.ch <- msg
 				}
 			}
 		}

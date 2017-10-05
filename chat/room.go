@@ -59,6 +59,12 @@ func (r *Room) Listen() {
 	go r.listenWrite()
 }
 
+//Send message
+// func (r Room) sendMessage(response ResponseMessage) {
+// 	websocket.JSON.Send(r.Operator.ws, response)
+// 	websocket.JSON.Send(r.Client.ws, response)
+// }
+
 // Listen write request via chanel
 func (r *Room) listenWrite() {
 	log.Println("Listening write to room")
@@ -69,25 +75,30 @@ func (r *Room) listenWrite() {
 		case msg := <-r.channelForMessage:
 			r.Messages = append(r.Messages, msg)
 			messages, _ := json.Marshal(r.Messages)
-			msg1 := ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: messages}
-			websocket.JSON.Send(r.Operator.ws, msg1)
-			websocket.JSON.Send(r.Client.ws, msg1)
+			response := ResponseMessage{Action: actionSendMessage, Status: "OK", Room: r.Id, Code: 200, Body: messages}
+			log.Println(response)
+			r.Client.ch <- response
+			r.Operator.ch <- response
+			//websocket.JSON.Send(r.Operator.ws, response)
+			//websocket.JSON.Send(r.Client.ws, response)
+			//r.sendMessage(response)
 
-		//добавление описание комнате
-		case msg := <-r.channelForDescription:
-			log.Println("create description", msg, r.Description)
-			r.Description = msg.Description
-			r.Title = msg.Title
+			//добавление описание комнате
+		case description := <-r.channelForDescription:
+			r.Description = description.Description
+			r.Title = description.Title
 			r.Status = roomNew
-			log.Println(r.Description)
-			r.server.broadcastRooms()
+			msg, _ := json.Marshal(r)
+			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
+			r.Client.ch <- response
+			r.server.broadcastChangeStatus(*r)
 
 		//изменения статуса комнаты
 		case msg := <-r.channelForStatus:
 			log.Println("change status", msg, r.Description)
 			r.Status = msg
-			jsonstring, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
+			jsonstring1, _ := json.Marshal(r)
+			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring1}
 			websocket.JSON.Send(r.Client.ws, response)
 			r.server.broadcastChangeStatus(*r)
 		}

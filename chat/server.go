@@ -165,14 +165,14 @@ func (s *Server) Listen() {
 		// Add new a operator
 		case o := <-s.addOCh:
 			log.Println("Added new operator")
-			s.operators[o.id] = o
+			s.operators[o.Id] = o
 			log.Println("Now", len(s.operators), "operators connected.")
 			s.sendAllRooms(o)
 
 		// del a operator
 		case o := <-s.delOCh:
 			log.Println("Delete operator")
-			delete(s.operators, o.id)
+			delete(s.operators, o.Id)
 
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())
