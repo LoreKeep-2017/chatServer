@@ -57,7 +57,7 @@ func (o *Operator) sendChangeStatus(room Room) {
 		msg := ResponseMessage{Action: actionChangeStatusRooms, Status: "Server error", Code: 502}
 		websocket.JSON.Send(o.ws, msg)
 	}
-	msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
+	msg := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
 	websocket.JSON.Send(o.ws, msg)
 }
 
@@ -151,14 +151,12 @@ func (o *Operator) listenRead() {
 				room := o.server.rooms[rID.ID]
 				room.Status = roomInProgress
 				o.rooms[room.Id] = room
-				jsonstring, err := json.Marshal(room)
-				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionEnterRoom, Status: "Server error", Code: 502}
-					websocket.JSON.Send(o.ws, msg)
-				}
+				jsonstring, _ := json.Marshal(room)
+
 				msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
-				websocket.JSON.Send(room.Client.ws, msg)
-				o.server.broadcastChangeStatus(*room)
+				websocket.JSON.Send(o.ws, msg)
+				//o.server.broadcastChangeStatus(*room)
+				room.channelForStatus <- roomInProgress
 
 			//отправка сообщения
 			case actionSendMessage:
