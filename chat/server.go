@@ -18,7 +18,7 @@ type Server struct {
 	messages []*Message
 	//типы пользователей
 	operators map[int]*Operator
-	rooms     []Room
+	rooms     map[int]*Room
 	//операции
 	//клиент
 	addCh chan *Client
@@ -39,7 +39,7 @@ type Server struct {
 func NewServer() *Server {
 	messages := []*Message{}
 	operators := make(map[int]*Operator)
-	rooms := make([]Room, 0)
+	rooms := make(map[int]*Room)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
 	addOCh := make(chan *Operator)
@@ -101,6 +101,13 @@ func (s *Server) broadcastRooms() {
 	}
 }
 
+func (s *Server) broadcastChangeStatus(room Room) {
+	for _, operator := range s.operators {
+		log.Println("BroadcastChangestatus")
+		operator.sendChangeStatus(room)
+	}
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (s *Server) Listen() {
@@ -116,10 +123,10 @@ func (s *Server) Listen() {
 			}
 		}()
 
-		room := NewRoom()
+		room := NewRoom(s)
 		client := NewClient(ws, s, "nick", room)
 		room.Client = client
-		s.rooms = append(s.rooms, *room)
+		s.rooms[room.Id] = room
 		s.Add(client)
 		room.Listen()
 		client.Listen()

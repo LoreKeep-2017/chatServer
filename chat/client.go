@@ -87,11 +87,11 @@ func (c *Client) listenWrite() {
 			c.doneCh <- true // for listenRead method
 			return
 
-		case r := <-c.addRoomCh:
-			log.Println("add room to client")
-			c.room = r
-			msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
-			websocket.JSON.Send(c.ws, msg)
+			// case r := <-c.addRoomCh:
+			// 	log.Println("add room to client")
+			// 	c.room = r
+			// 	msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
+			// 	websocket.JSON.Send(c.ws, msg)
 			//
 			// msg := ClientGreetingResponse{"grabing", "ROOM create hello:)"}
 			// websocket.JSON.Send(c.ws, msg)

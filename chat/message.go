@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	actionSendMessage    = "sendMessage"
-	actionGetAllMessages = "getAllMessages"
-	actionCloseRoom      = "closeRoom"
+	actionSendMessage       = "sendMessage"
+	actionGetAllMessages    = "getAllMessages"
+	actionCloseRoom         = "closeRoom"
+	actionChangeStatusRooms = "changeStatusRoom"
 )
 
 type Message struct {

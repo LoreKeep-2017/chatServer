@@ -51,6 +51,16 @@ func (o *Operator) sendAllRooms() {
 
 }
 
+func (o *Operator) sendChangeStatus(room Room) {
+	jsonstring, err := json.Marshal(room)
+	if !CheckError(err, "Invalid RawData", false) {
+		msg := ResponseMessage{Action: actionChangeStatusRooms, Status: "Server error", Code: 502}
+		websocket.JSON.Send(o.ws, msg)
+	}
+	msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
+	websocket.JSON.Send(o.ws, msg)
+}
+
 // Listen Write and Read request via chanel
 func (o *Operator) Listen() {
 	go o.listenWrite()
@@ -75,16 +85,17 @@ func (o *Operator) listenWrite() {
 				response := OperatorResponseRooms{o.server.rooms, len(o.server.rooms)}
 				jsonstring, _ := json.Marshal(response)
 				msg1 := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring}
+				log.Println(o.server.rooms)
 				websocket.JSON.Send(o.ws, msg1)
 			}
 
 		// adding to room
-		case room := <-o.addToRoomCh:
-			o.rooms[room.Id] = room
-			response := OperatorResponseAddToRoom{room.Id}
-			jsonstring, _ := json.Marshal(response)
-			msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200, Body: jsonstring}
-			websocket.JSON.Send(o.ws, msg)
+		// case room := <-o.addToRoomCh:
+		// 	o.rooms[room.Id] = room
+		// 	response := OperatorResponseAddToRoom{room.Id}
+		// 	jsonstring, _ := json.Marshal(response)
+		// 	msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200, Body: jsonstring}
+		// 	websocket.JSON.Send(o.ws, msg)
 
 		// receive done request
 		case <-o.doneCh:
@@ -128,19 +139,26 @@ func (o *Operator) listenRead() {
 				msg := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring1}
 				websocket.JSON.Send(o.ws, msg)
 
-			//создание комнаты
-			case actionCreateRoom:
-				log.Println(actionCreateRoom)
-				var cid RequestCreateRoom
-				err := json.Unmarshal(msg.Body, &cid)
+			//вход в комнату
+			case actionEnterRoom:
+				log.Println(actionEnterRoom)
+				var rID RequestActionWithRoom
+				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionCreateRoom, Status: "Invalid Request", Code: 403}
+					msg := ResponseMessage{Action: actionEnterRoom, Status: "Invalid Request", Code: 403}
 					websocket.JSON.Send(o.ws, msg)
-					//return
 				}
-				msg := ResponseMessage{Action: actionCreateRoom, Status: "OK", Code: 200}
-				websocket.JSON.Send(o.ws, msg)
-				//o.server.CreateRoom(cid.ID, o)
+				room := o.server.rooms[rID.ID]
+				room.Status = roomInProgress
+				o.rooms[room.Id] = room
+				jsonstring, err := json.Marshal(room)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionEnterRoom, Status: "Server error", Code: 502}
+					websocket.JSON.Send(o.ws, msg)
+				}
+				msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
+				websocket.JSON.Send(room.Client.ws, msg)
+				o.server.broadcastChangeStatus(*room)
 
 			//отправка сообщения
 			case actionSendMessage:
