@@ -139,14 +139,14 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 				room := o.server.rooms[rID.ID]
-				room.Status = roomInProgress
+				room.Status = roomBusy
 				room.Operator = o
 				o.rooms[room.Id] = room
 				jsonstring, _ := json.Marshal(room)
 
 				msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
 				o.ch <- msg
-				room.channelForStatus <- roomInProgress
+				room.channelForStatus <- roomBusy
 
 			//отправка сообщения
 			case actionSendMessage:
@@ -167,10 +167,21 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
-			//закрытие комнаты
-			case actionCloseRoom:
-				log.Println(actionCloseRoom)
-				//var message Message
+			//покидание комнаты
+			case actionLeaveRoom:
+				log.Println(actionLeaveRoom)
+				var rID RequestActionWithRoom
+				err := json.Unmarshal(msg.Body, &rID)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 403}
+					o.ch <- msg
+				}
+				room := o.server.rooms[rID.ID]
+				room.Status = roomInProgress
+				delete(o.rooms, room.Id)
+				msg := ResponseMessage{Action: actionLeaveRoom, Status: "OK", Code: 200, Body: msg.Body}
+				o.ch <- msg
+				room.channelForStatus <- roomInProgress
 
 			}
 
