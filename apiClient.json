@@ -1,0 +1,84 @@
+//Client
+
+//отправить описание
+request
+{
+  "type":"client",
+  "action" : "sendDescriptionRoom",
+  "body" : {
+    "description" : "описание2",
+    "title": "название"
+  }
+}
+response
+{
+  "action": "changeStatusRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 1,
+    "client": {
+      "id": 1,
+      "nick": "nick"
+    },
+    "operator": {
+      "id": 1
+    },
+    "messages": [{
+      "author": "operator",
+      "body": "hello",
+      "room": 1,
+      "time": 1507239556
+    }, {
+      "author": "operator",
+      "body": "hello",
+      "room": 1,
+      "time": 1507239560
+    }],
+    "status": "roomNew",
+    "description": "описание2",
+    "title": "название"
+  }
+}
+
+
+//отправить сообщение
+
+request
+{
+  "type":"client",
+  "action" : "sendMessage",
+  "body" : {
+    "author" : "client",
+    "body": "сообщение"
+  }
+}
+
+response
+{
+  "action": "sendMessage",
+  "status": "OK",
+  "code": 200,
+  "room": 1,
+  "body": [{
+    "author": "operator",
+    "body": "hello",
+    "room": 1,
+    "time": 1507239556
+  }, {
+    "author": "operator",
+    "body": "hello",
+    "room": 1,
+    "time": 1507239560
+  }, {
+    "author": "client",
+    "body": "название",
+    "room": 1,
+    "time": 1507239748
+  }, {
+    "author": "client",
+    "body": "название",
+    "room": 1,
+    "time": 1507239754
+  }]
+}

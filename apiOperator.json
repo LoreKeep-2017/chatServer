@@ -1,0 +1,95 @@
+//////////Operator
+
+//получение всех комнат
+request
+{
+  "type" : "operator",
+  "action":"getAllRooms"
+}
+response
+{
+  "action": "getAllRooms",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "rooms": {
+      "1": {
+        "id": 1,
+        "client": {
+          "id": 1,
+          "nick": "nick"
+        },
+        "messages": [],
+        "status": "roomNotActive"
+      },
+      "1": {
+        "id": 1,
+        "client": {
+          "id": 1,
+          "nick": "nick"
+        },
+        "messages": [],
+        "status": "roomNotActive"
+      }
+    },
+    "size": 1
+  }
+}
+
+//вход в комнату
+request
+{
+  "type" : "operator",
+  "action":"enterRoom",
+  "body":  {
+    "rid" : 1
+  }
+}
+response
+{
+  "action": "changeStatusRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 1,
+    "client": {
+      "id": 1,
+      "nick": "nick"
+    },
+    "operator": {
+      "id": 1
+    },
+    "messages": [],
+    "status": "roomInProgress"
+  }
+}
+
+//отправка сообщения
+request
+{
+  "type" : "operator",
+  "action":"sendMessage",
+  "body":  {
+    "room" : 2,
+    "body": "hello",
+    "author": "operator"
+  }
+}
+response
+{
+  "action": "sendMessage",
+  "status": "OK",
+  "code": 200,
+  "room": 1,
+  "body": [{
+    "author": "operator",
+    "body": "hello",
+    "room": 1,
+    "time": 1507239556
+  }, {
+    "author": "operator",
+    "body": "hello",
+    "room": 1,
+    "time": 1507239560
+  }]
+}
