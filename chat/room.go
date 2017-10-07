@@ -3,8 +3,6 @@ package chat
 import (
 	"encoding/json"
 	"log"
-
-	"golang.org/x/net/websocket"
 )
 
 const (
@@ -79,28 +77,25 @@ func (r *Room) listenWrite() {
 			log.Println(response)
 			r.Client.ch <- response
 			r.Operator.ch <- response
-			//websocket.JSON.Send(r.Operator.ws, response)
-			//websocket.JSON.Send(r.Client.ws, response)
-			//r.sendMessage(response)
 
-			//добавление описание комнате
+		//добавление описание комнате
 		case description := <-r.channelForDescription:
 			r.Description = description.Description
 			r.Title = description.Title
 			r.Status = roomNew
 			msg, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
+			response := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200, Body: msg}
 			r.Client.ch <- response
-			r.server.broadcastChangeStatus(*r)
+			r.server.broadcast(response)
 
 		//изменения статуса комнаты
 		case msg := <-r.channelForStatus:
-			log.Println("change status", msg, r.Description)
 			r.Status = msg
-			jsonstring1, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring1}
-			websocket.JSON.Send(r.Client.ws, response)
-			r.server.broadcastChangeStatus(*r)
+			jsonstring, _ := json.Marshal(r)
+			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
+			//websocket.JSON.Send(r.Client.ws, response)
+			r.Client.ch <- response
+			r.server.broadcast(response)
 		}
 	}
 }

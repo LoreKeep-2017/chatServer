@@ -104,7 +104,6 @@ func (c *Client) listenRead() {
 
 		// read data from websocket connection
 		default:
-			//var msg ClientRequest
 			var msg RequestMessage
 			err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
@@ -114,6 +113,8 @@ func (c *Client) listenRead() {
 			}
 			log.Println(msg)
 			switch msg.Action {
+
+			//отправка сообщений
 			case actionSendMessage:
 				log.Println(actionSendMessage)
 				var message Message
@@ -129,8 +130,10 @@ func (c *Client) listenRead() {
 					c.room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
-					websocket.JSON.Send(c.ws, msg)
+					c.ch <- msg
 				}
+
+			//описание комнаты
 			case actionSendDescriptionRoom:
 				log.Println(actionSendDescriptionRoom)
 				var roomDescription ClientSendDescriptionRoomRequest
@@ -140,9 +143,21 @@ func (c *Client) listenRead() {
 					c.ch <- msg
 				} else {
 					c.room.channelForDescription <- roomDescription
-					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200}
-					c.ch <- msg
 				}
+
+			//закрытие комнаты
+			case actionCloseRoom:
+				log.Println(actionCloseRoom)
+				c.room.Status = roomClose
+				c.room.channelForStatus <- roomClose
+
+			//получение всех сообщений
+			case actionGetAllMessages:
+				log.Println(actionGetAllMessages)
+				messages, _ := json.Marshal(c.room.Messages)
+				response := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
+				log.Println(response)
+				c.ch <- response
 			}
 		}
 	}

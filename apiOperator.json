@@ -93,3 +93,68 @@ response
     "time": 1507239560
   }]
 }
+
+//покидание комнаты
+request
+{
+  "type" : "operator",
+  "action":"leaveRoom",
+  "body":  {
+    "rid" : 1
+  }
+}
+
+response
+{
+  "action": "changeStatusRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 1,
+    "client": {
+      "id": 1,
+      "nick": "nick"
+    },
+    "operator": {
+      "id": 1
+    },
+    "messages": [{
+      "author": "client",
+      "body": "название",
+      "room": 1,
+      "time": 1507242050
+    }],
+    "status": "roomInProgress",
+    "description": "описание2",
+    "title": "название"
+  }
+}
+
+
+//закрытие комнаты
+request
+{
+  "type" : "operator",
+  "action":"closeRoom",
+  "body":  {
+    "rid" : 1
+  }
+}
+response
+{
+  "action": "changeStatusRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 1,
+    "client": {
+      "id": 1,
+      "nick": "nick"
+    },
+    "operator": {
+      "id": 2
+    },
+    "messages": [],
+    "status": "roomClose"
+  }
+}

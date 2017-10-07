@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -90,22 +91,17 @@ func (s *Server) Err(err error) {
 	s.errCh <- err
 }
 
-func (s *Server) sendAllRooms(o *Operator) {
-	o.sendAllRooms()
-}
-
-func (s *Server) broadcastRooms() {
+func (s *Server) broadcast(responseMessage ResponseMessage) {
 	for _, operator := range s.operators {
-		log.Println("sendAllRooms")
-		operator.sendAllRooms()
+		operator.ch <- responseMessage
 	}
 }
 
-func (s *Server) broadcastChangeStatus(room Room) {
-	for _, operator := range s.operators {
-		log.Println("BroadcastChangestatus")
-		operator.sendChangeStatus(room)
-	}
+func (s *Server) createResponseAllRooms() ResponseMessage {
+	response := OperatorResponseRooms{s.rooms, len(s.rooms)}
+	jsonstring, _ := json.Marshal(response)
+	msg := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring}
+	return msg
 }
 
 // Listen and serve.
@@ -154,20 +150,21 @@ func (s *Server) Listen() {
 
 		// Add new a client
 		case <-s.addCh:
-			log.Println("Added new client")
-			s.broadcastRooms()
+			msg := s.createResponseAllRooms()
+			s.broadcast(msg)
 
 		// del a client
 		case <-s.delCh:
 			log.Println("Delete client")
-			s.broadcastRooms()
+			msg := s.createResponseAllRooms()
+			s.broadcast(msg)
 
 		// Add new a operator
 		case o := <-s.addOCh:
 			log.Println("Added new operator")
 			s.operators[o.Id] = o
-			log.Println("Now", len(s.operators), "operators connected.")
-			s.sendAllRooms(o)
+			msg := s.createResponseAllRooms()
+			o.ch <- msg
 
 		// del a operator
 		case o := <-s.delOCh:
