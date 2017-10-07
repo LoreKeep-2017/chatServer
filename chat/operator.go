@@ -176,12 +176,36 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				room := o.server.rooms[rID.ID]
-				room.Status = roomInProgress
-				delete(o.rooms, room.Id)
-				msg := ResponseMessage{Action: actionLeaveRoom, Status: "OK", Code: 200, Body: msg.Body}
-				o.ch <- msg
-				room.channelForStatus <- roomInProgress
+				if room, ok := o.rooms[rID.ID]; ok {
+					room.Status = roomInProgress
+					delete(o.rooms, room.Id)
+					msg := ResponseMessage{Action: actionLeaveRoom, Status: "OK", Code: 200, Body: msg.Body}
+					o.ch <- msg
+					room.channelForStatus <- roomInProgress
+				} else {
+					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Room not found", Code: 404, Body: msg.Body}
+					o.ch <- msg
+				}
+
+			//закрытие комнаты
+			case actionCloseRoom:
+				log.Println(actionCloseRoom)
+				var rID RequestActionWithRoom
+				err := json.Unmarshal(msg.Body, &rID)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionCloseRoom, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				}
+				if room, ok := o.rooms[rID.ID]; ok {
+					room.Status = roomClose
+					delete(o.rooms, room.Id)
+					msg := ResponseMessage{Action: actionCloseRoom, Status: "OK", Code: 200, Body: msg.Body}
+					o.ch <- msg
+					room.channelForStatus <- roomClose
+				} else {
+					msg := ResponseMessage{Action: actionCloseRoom, Status: "Room not found", Code: 404, Body: msg.Body}
+					o.ch <- msg
+				}
 
 			}
 
