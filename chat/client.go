@@ -114,6 +114,8 @@ func (c *Client) listenRead() {
 			}
 			log.Println(msg)
 			switch msg.Action {
+
+			//отправка сообщений
 			case actionSendMessage:
 				log.Println(actionSendMessage)
 				var message Message
@@ -131,6 +133,8 @@ func (c *Client) listenRead() {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
 					websocket.JSON.Send(c.ws, msg)
 				}
+
+				//описание комнаты
 			case actionSendDescriptionRoom:
 				log.Println(actionSendDescriptionRoom)
 				var roomDescription ClientSendDescriptionRoomRequest
@@ -140,8 +144,6 @@ func (c *Client) listenRead() {
 					c.ch <- msg
 				} else {
 					c.room.channelForDescription <- roomDescription
-					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200}
-					c.ch <- msg
 				}
 			}
 		}

@@ -86,9 +86,9 @@ func (r *Room) listenWrite() {
 			r.Title = description.Title
 			r.Status = roomNew
 			msg, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
+			response := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200, Body: msg}
 			r.Client.ch <- response
-			r.server.broadcastChangeStatus(*r)
+			r.server.broadcast(response)
 
 		//изменения статуса комнаты
 		case msg := <-r.channelForStatus:
@@ -96,7 +96,7 @@ func (r *Room) listenWrite() {
 			jsonstring, _ := json.Marshal(r)
 			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
 			websocket.JSON.Send(r.Client.ws, response)
-			r.server.broadcastChangeStatus(*r)
+			r.server.broadcast(response)
 		}
 	}
 }
