@@ -3,8 +3,6 @@ package chat
 import (
 	"encoding/json"
 	"log"
-
-	"golang.org/x/net/websocket"
 )
 
 const (
@@ -95,7 +93,8 @@ func (r *Room) listenWrite() {
 			r.Status = msg
 			jsonstring, _ := json.Marshal(r)
 			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
-			websocket.JSON.Send(r.Client.ws, response)
+			//websocket.JSON.Send(r.Client.ws, response)
+			r.Client.ch <- response
 			r.server.broadcast(response)
 		}
 	}

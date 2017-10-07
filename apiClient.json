@@ -110,3 +110,50 @@ response
     "title": "название"
   }
 }
+
+//зыкрытие комнаты
+request
+{
+  "type":"client",
+  "action" : "closeRoom"
+}
+
+response
+{
+  "action": "changeStatusRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 1,
+    "client": {
+      "id": 1,
+      "nick": "nick"
+    },
+    "messages": [],
+    "status": "roomClose"
+  }
+}
+
+// получение всех сообщений
+request
+{
+  "type":"client",
+  "action" : "getAllMessages"
+}
+response
+{
+  "action": "getAllMessages",
+  "status": "OK",
+  "code": 200,
+  "body": [{
+    "author": "operator",
+    "body": "hello",
+    "room": 1,
+    "time": 1507364687
+  }, {
+    "author": "client",
+    "body": "описание22",
+    "room": 1,
+    "time": 1507364702
+  }]
+}
