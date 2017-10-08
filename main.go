@@ -10,7 +10,7 @@ import (
 func main() {
 	log.SetFlags(log.Lshortfile)
 
-	// websocket server
+	// websocket serverg
 	server := chat.NewServer()
 	go server.Listen()
 
