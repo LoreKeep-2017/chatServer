@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-
-	"github.com/iliabulavintsev/deliverygram/chat"
+	"github.com/LoreKeep-2017/chatServer"
 )
+
 
 func main() {
 	log.SetFlags(log.Lshortfile)
