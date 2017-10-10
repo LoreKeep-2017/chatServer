@@ -4,9 +4,10 @@ import "log"
 
 // Operator methods
 const (
-	actionGetAllRooms = "getAllRooms"
-	actionEnterRoom   = "enterRoom"
-	actionLeaveRoom   = "leaveRoom"
+	actionGetAllRooms      = "getAllRooms"
+	actionEnterRoom        = "enterRoom"
+	actionLeaveRoom        = "leaveRoom"
+	actionGetRoomsByStatus = "getRoomsByStatus"
 )
 
 // CheckError checks errors and print log
@@ -34,6 +35,10 @@ type OperatorResponseRooms struct {
 
 type RequestActionWithRoom struct {
 	ID int `json:"rid"`
+}
+
+type RequestTypeRooms struct {
+	Type string `json:"type"`
 }
 
 type OperatorSendMessage struct {

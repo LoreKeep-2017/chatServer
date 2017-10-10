@@ -54,6 +54,16 @@ func (o *Operator) sendChangeStatus(room Room) {
 	websocket.JSON.Send(o.ws, msg)
 }
 
+func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
+	result := make(map[int]*Room, 0)
+	for k, room := range o.server.rooms {
+		if room.Status == typeRoom {
+			result[k] = room
+		}
+	}
+	return result
+}
+
 // Listen Write and Read request via chanel
 func (o *Operator) Listen() {
 	go o.listenWrite()
@@ -150,6 +160,24 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
+			//получение всех сообщений
+			case actionGetAllMessages:
+				log.Println(actionGetAllMessages)
+				var rID RequestActionWithRoom
+				err := json.Unmarshal(msg.Body, &rID)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Invalid Request", Code: 403}
+					o.ch <- msg
+				}
+				if room, ok := o.rooms[rID.ID]; ok {
+					messages, _ := json.Marshal(room.Messages)
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
+					o.ch <- msg
+				} else {
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
+					o.ch <- msg
+				}
+
 			//покидание комнаты
 			case actionLeaveRoom:
 				log.Println(actionLeaveRoom)
@@ -187,6 +215,21 @@ func (o *Operator) listenRead() {
 					room.channelForStatus <- roomClose
 				} else {
 					msg := ResponseMessage{Action: actionCloseRoom, Status: "Room not found", Code: 404, Body: msg.Body}
+					o.ch <- msg
+				}
+
+			case actionGetRoomsByStatus:
+				log.Println(actionGetRoomsByStatus)
+				var typeRoom RequestTypeRooms
+				err := json.Unmarshal(msg.Body, &typeRoom)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					result := o.searchRoomByStatus(typeRoom.Type)
+					response := OperatorResponseRooms{result, len(result)}
+					rooms, _ := json.Marshal(response)
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}
 					o.ch <- msg
 				}
 

@@ -84,7 +84,7 @@ func (r *Room) listenWrite() {
 			r.Title = description.Title
 			r.Status = roomNew
 			msg, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionSendDescriptionRoom, Status: "OK", Code: 200, Body: msg}
+			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
 			r.Client.ch <- response
 			r.server.broadcast(response)
 
