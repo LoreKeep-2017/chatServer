@@ -218,6 +218,7 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
+			//получение комнаты по статусу
 			case actionGetRoomsByStatus:
 				log.Println(actionGetRoomsByStatus)
 				var typeRoom RequestTypeRooms

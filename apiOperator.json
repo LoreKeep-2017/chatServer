@@ -158,3 +158,33 @@ response
     "status": "roomClose"
   }
 }
+
+//получение комнат по статусу
+response
+{
+  "type":"operator",
+  "action" : "getRoomsByStatus",
+  "body" : {
+    "type": "roomNotActive"
+  }
+}
+request
+{
+  "action": "getRoomsByStatus",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "rooms": {
+      "1": {
+        "id": 1,
+        "client": {
+          "id": 1,
+          "nick": "nick"
+        },
+        "messages": [],
+        "status": "roomNotActive"
+      }
+    },
+    "size": 1
+  }
+}
