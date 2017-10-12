@@ -151,8 +151,8 @@ func (s *Server) Listen() {
 
 		// Add new a client
 		case <-s.addCh:
-			msg := s.createResponseAllRooms()
-			s.broadcast(msg)
+			//msg := s.createResponseAllRooms()
+			//s.broadcast(msg)
 
 			// del a client
 		case c := <-s.delCh:
