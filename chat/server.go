@@ -163,8 +163,8 @@ func (s *Server) Listen() {
 		case o := <-s.addOCh:
 			log.Println("Added new operator")
 			s.operators[o.Id] = o
-			msg := s.createResponseAllRooms()
-			o.ch <- msg
+			//msg := s.createResponseAllRooms()
+			//o.ch <- msg
 
 		// del a operator
 		case o := <-s.delOCh:

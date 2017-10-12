@@ -13,6 +13,7 @@ type ClientSendMessageRequest struct {
 type ClientSendDescriptionRoomRequest struct {
 	Description string `json:"description"`
 	Title       string `json:"title"`
+	Nick        string `json:"nick"`
 }
 
 type ClientGreetingResponse struct {
