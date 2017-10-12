@@ -79,7 +79,9 @@ func (o *Operator) listenWrite() {
 		// send message to the operator
 		case msg := <-o.ch:
 			log.Println(o.ws, msg)
-			websocket.JSON.Send(o.ws, msg)
+			if o.ws != nil {
+				websocket.JSON.Send(o.ws, msg)
+			}
 
 		// receive done request
 		case <-o.doneCh:

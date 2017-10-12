@@ -75,8 +75,12 @@ func (r *Room) listenWrite() {
 			messages, _ := json.Marshal(r.Messages)
 			response := ResponseMessage{Action: actionSendMessage, Status: "OK", Room: r.Id, Code: 200, Body: messages}
 			log.Println(response)
-			r.Client.ch <- response
-			r.Operator.ch <- response
+			if r.Client != nil {
+				r.Client.ch <- response
+			}
+			if r.Operator != nil {
+				r.Operator.ch <- response
+			}
 
 		//добавление описание комнате
 		case description := <-r.channelForDescription:
