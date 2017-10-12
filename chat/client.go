@@ -68,7 +68,9 @@ func (c *Client) listenWrite() {
 		// send message to the client
 		case msg := <-c.ch:
 			log.Println("Send:", msg, c.ws)
-			websocket.JSON.Send(c.ws, msg)
+			if c.ws != nil {
+				websocket.JSON.Send(c.ws, msg)
+			}
 
 		// receive done request
 		case <-c.doneCh:
