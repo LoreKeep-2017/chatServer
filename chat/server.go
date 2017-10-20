@@ -1,10 +1,15 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	_ "github.com/lib/pq"
+
+	"github.com/LoreKeep-2017/chatServer/db"
 	"golang.org/x/net/websocket"
 )
 
@@ -20,6 +25,7 @@ type Server struct {
 	//типы пользователей
 	operators map[int]*Operator
 	rooms     map[int]*Room
+	db        *sql.DB
 	//операции
 	//клиент
 	addCh chan *Client
@@ -41,6 +47,8 @@ func NewServer() *Server {
 	messages := []*Message{}
 	operators := make(map[int]*Operator)
 	rooms := make(map[int]*Room)
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
+	db, err := sql.Open("postgres", dbinfo)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
 	addOCh := make(chan *Operator)
@@ -51,10 +59,15 @@ func NewServer() *Server {
 	doneCh := make(chan bool)
 	errCh := make(chan error)
 
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return &Server{
 		messages,
 		operators,
 		rooms,
+		db,
 		addCh,
 		delCh,
 		addOCh,

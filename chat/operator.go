@@ -11,8 +11,6 @@ import (
 
 const operatorChannelBufSize = 100
 
-var operatorId int = 0
-
 // Chat operator.
 type Operator struct {
 	Id          int `json:"id"`
@@ -35,7 +33,12 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 		panic("server cannot be nil")
 	}
 
-	operatorId++
+	var operatorId int
+	err := server.db.QueryRow(`insert into operator(nickname, password) values('oper', '123456') returning id;`).Scan(&operatorId)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	rooms := make(map[int]*Room)
 	ch := make(chan ResponseMessage, channelBufSize)
 	doneCh := make(chan bool)
@@ -55,11 +58,21 @@ func (o *Operator) sendChangeStatus(room Room) {
 }
 
 func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
+	rows, err := o.server.db.Query("SELECT room, description, title, nickname, status, operator FROM room where status=$1", typeRoom)
+	if err != nil {
+		panic(err)
+	}
 	result := make(map[int]*Room, 0)
-	for k, room := range o.server.rooms {
-		if room.Status == typeRoom {
-			result[k] = room
-		}
+	for rows.Next() {
+		var room int
+		var description string
+		var title string
+		var nickname string
+		var status string
+		var operator int
+		_ = rows.Scan(&room, &description, &title, &nickname, &status, &operator)
+		r := Room{Id: room, Status: status, Description: description, Title: title, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
+		result[room] = &r
 	}
 	return result
 }
@@ -139,9 +152,30 @@ func (o *Operator) listenRead() {
 				o.rooms[room.Id] = room
 				jsonstring, _ := json.Marshal(room)
 
-				msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
-				o.ch <- msg
-				room.channelForStatus <- roomBusy
+				_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
+					room.Id,
+					o.Id,
+				)
+				_, dberr1 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
+					room.Id,
+					o.Id,
+				)
+				response := ResponseMessage{}
+				if dberr != nil || dberr1 != nil {
+					response.Action = actionEnterRoom
+					response.Status = dberr.Error() + dberr1.Error()
+					response.Code = 500
+				} else {
+					response.Action = actionEnterRoom
+					response.Status = "OK"
+					response.Code = 200
+					response.Body = jsonstring
+					room.channelForStatus <- roomBusy
+				}
+				o.ch <- response
+				//msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
+				//o.ch <- msg
+				//room.channelForStatus <- roomBusy
 
 			//отправка сообщения
 			case actionSendMessage:
@@ -171,12 +205,23 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				if room, ok := o.rooms[rID.ID]; ok {
-					messages, _ := json.Marshal(room.Messages)
-					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
+				messages := make([]Message, 0)
+				rows, err := o.server.db.Query("SELECT room, type, date, body FROM message where room=$1", rID.ID)
+				if err != nil {
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					o.ch <- msg
 				} else {
-					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
+					for rows.Next() {
+						var room int
+						var typeM string
+						var date int
+						var body string
+						_ = rows.Scan(&room, &typeM, &date, &body)
+						m := Message{typeM, body, room, date}
+						messages = append(messages, m)
+					}
+					jsonMessages, _ := json.Marshal(messages)
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 					o.ch <- msg
 				}
 
@@ -192,8 +237,22 @@ func (o *Operator) listenRead() {
 				if room, ok := o.rooms[rID.ID]; ok {
 					room.Status = roomInProgress
 					delete(o.rooms, room.Id)
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "OK", Code: 200, Body: msg.Body}
-					o.ch <- msg
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
+						room.Id,
+						o.Id,
+					)
+					response := ResponseMessage{}
+					if dberr != nil {
+						response.Action = actionLeaveRoom
+						response.Status = dberr.Error()
+						response.Code = 500
+					} else {
+						response.Action = actionLeaveRoom
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = msg.Body
+					}
+					o.ch <- response
 					room.channelForStatus <- roomInProgress
 				} else {
 					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Room not found", Code: 404, Body: msg.Body}
@@ -212,8 +271,22 @@ func (o *Operator) listenRead() {
 				if room, ok := o.rooms[rID.ID]; ok {
 					room.Status = roomClose
 					delete(o.rooms, room.Id)
-					msg := ResponseMessage{Action: actionCloseRoom, Status: "OK", Code: 200, Body: msg.Body}
-					o.ch <- msg
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
+						room.Id,
+						o.Id,
+					)
+					response := ResponseMessage{}
+					if dberr != nil {
+						response.Action = actionCloseRoom
+						response.Status = dberr.Error()
+						response.Code = 500
+					} else {
+						response.Action = actionCloseRoom
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = msg.Body
+					}
+					o.ch <- response
 					room.channelForStatus <- roomClose
 				} else {
 					msg := ResponseMessage{Action: actionCloseRoom, Status: "Room not found", Code: 404, Body: msg.Body}

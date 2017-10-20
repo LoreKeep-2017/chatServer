@@ -15,8 +15,6 @@ const (
 	roomClose      = "roomClose"
 )
 
-var roomId int = 0
-
 // Chat operator.
 type Room struct {
 	Id                    int `json:"id"`
@@ -35,7 +33,12 @@ type Room struct {
 // Create new room.
 func NewRoom(server *Server) *Room {
 
-	roomId++
+	var roomId int
+	err := server.db.QueryRow(`insert into room default values returning room;`).Scan(&roomId)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	ch := make(chan Message, roomChannelBufSize)
 	channelForDescription := make(chan ClientSendDescriptionRoomRequest)
 	channelForStatus := make(chan string)
@@ -57,12 +60,6 @@ func (r *Room) Listen() {
 	go r.listenWrite()
 }
 
-//Send message
-// func (r Room) sendMessage(response ResponseMessage) {
-// 	websocket.JSON.Send(r.Operator.ws, response)
-// 	websocket.JSON.Send(r.Client.ws, response)
-// }
-
 // Listen write request via chanel
 func (r *Room) listenWrite() {
 	log.Println("Listening write to room")
@@ -71,9 +68,31 @@ func (r *Room) listenWrite() {
 
 		// отправка сообщений участникам комнаты
 		case msg := <-r.channelForMessage:
-			r.Messages = append(r.Messages, msg)
-			messages, _ := json.Marshal(r.Messages)
-			response := ResponseMessage{Action: actionSendMessage, Status: "OK", Room: r.Id, Code: 200, Body: messages}
+			//r.Messages = append(r.Messages, msg)
+			_, err := r.server.db.Query(`insert into message(room, type, date, body) values($1, $2, $3, $4)`,
+				r.Id,
+				msg.Author,
+				msg.Time,
+				msg.Body,
+			)
+			var response ResponseMessage
+			messages := make([]Message, 0)
+			rows, err := r.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)
+			if err != nil {
+				response = ResponseMessage{Action: actionSendMessage, Status: err.Error(), Code: 404}
+			} else {
+				for rows.Next() {
+					var room int
+					var typeM string
+					var date int
+					var body string
+					_ = rows.Scan(&room, &typeM, &date, &body)
+					m := Message{typeM, body, room, date}
+					messages = append(messages, m)
+				}
+				jsonMessages, _ := json.Marshal(messages)
+				response = ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: jsonMessages}
+			}
 			log.Println(response)
 			if r.Client != nil {
 				r.Client.ch <- response
@@ -87,6 +106,17 @@ func (r *Room) listenWrite() {
 			r.Description = description.Description
 			r.Title = description.Title
 			r.Status = roomNew
+			rows, err := r.server.db.Query(`update room set description=$1, title=$2, status=$3, nickname=$4 where room=$5`,
+				r.Description,
+				r.Title,
+				r.Status,
+				description.Nick,
+				r.Id)
+			if err != nil {
+				panic(err)
+			} else {
+				log.Println(rows.Columns())
+			}
 			msg, _ := json.Marshal(r)
 			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
 			r.Client.ch <- response
@@ -96,10 +126,24 @@ func (r *Room) listenWrite() {
 		case msg := <-r.channelForStatus:
 			r.Status = msg
 			jsonstring, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
-			//websocket.JSON.Send(r.Client.ws, response)
+			response := ResponseMessage{}
+			_, err := r.server.db.Query(`update room set status=$1 where room=$2`,
+				r.Status,
+				r.Id)
+			if err != nil {
+				response.Action = actionChangeStatusRooms
+				response.Status = err.Error()
+				response.Code = 500
+			} else {
+				response.Action = actionChangeStatusRooms
+				response.Status = "OK"
+				response.Code = 200
+				response.Body = jsonstring
+
+			}
 			r.Client.ch <- response
 			r.server.broadcast(response)
+
 		}
 	}
 }
