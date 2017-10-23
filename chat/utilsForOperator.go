@@ -8,6 +8,7 @@ const (
 	actionEnterRoom        = "enterRoom"
 	actionLeaveRoom        = "leaveRoom"
 	actionGetRoomsByStatus = "getRoomsByStatus"
+	actionGetOperators     = "getOperators"
 )
 
 // CheckError checks errors and print log

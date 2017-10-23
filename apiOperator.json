@@ -160,7 +160,7 @@ response
 }
 
 //получение комнат по статусу
-response
+request
 {
   "type":"operator",
   "action" : "getRoomsByStatus",
@@ -168,7 +168,7 @@ response
     "type": "roomNotActive"
   }
 }
-request
+response
 {
   "action": "getRoomsByStatus",
   "status": "OK",
@@ -187,4 +187,21 @@ request
     },
     "size": 1
   }
+}
+
+//получение всех операторов
+request
+{
+  "type":"operator",
+  "action" : "getOperators"
+}
+response{
+  "action": "getOperators",
+  "status": "OK",
+  "code": 200,
+  "body": [{
+    "id": 2
+  }, {
+    "id": 17
+  }]
 }

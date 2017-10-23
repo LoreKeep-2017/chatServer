@@ -309,6 +309,27 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
+				//получение комнаты по статусу
+			case actionGetOperators:
+				log.Println(actionGetOperators)
+				rows, err := o.server.db.Query("SELECT id, nickname FROM operator")
+				if err != nil {
+					msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					result := make([]Operator, 0)
+					for rows.Next() {
+						var nickanme string
+						var id int
+						_ = rows.Scan(&id, &nickanme)
+						o := Operator{Id: id}
+						result = append(result, o)
+					}
+					operators, _ := json.Marshal(result)
+					msg := ResponseMessage{Action: actionGetOperators, Status: "OK", Code: 200, Body: operators}
+					o.ch <- msg
+				}
+
 			}
 
 		}
