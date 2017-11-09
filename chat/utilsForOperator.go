@@ -9,6 +9,7 @@ const (
 	actionLeaveRoom        = "leaveRoom"
 	actionGetRoomsByStatus = "getRoomsByStatus"
 	actionGetOperators     = "getOperators"
+	actionSendID           = "sendId"
 )
 
 // CheckError checks errors and print log

@@ -205,3 +205,16 @@ response{
     "id": 17
   }]
 }
+
+
+//отправка id
+request
+{
+  "id": 1,
+  "action" : "sendId"
+}
+response{
+  "action": "sendId",
+  "status": "OK",
+  "code": 200
+}

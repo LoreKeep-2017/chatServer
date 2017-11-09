@@ -1,10 +1,13 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"log"
 	"time"
+
+	"github.com/LoreKeep-2017/chatServer/auth"
 
 	"golang.org/x/net/websocket"
 )
@@ -33,18 +36,12 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 		panic("server cannot be nil")
 	}
 
-	var operatorId int
-	err := server.db.QueryRow(`insert into operator(nickname, password) values('oper', '123456') returning id;`).Scan(&operatorId)
-	if err != nil {
-		panic(err.Error())
-	}
-
 	rooms := make(map[int]*Room)
 	ch := make(chan ResponseMessage, channelBufSize)
 	doneCh := make(chan bool)
 	addToRoomCh := make(chan *Room, channelBufSize)
 
-	return &Operator{operatorId, ws, server, rooms, ch, doneCh, addToRoomCh}
+	return &Operator{0, ws, server, rooms, ch, doneCh, addToRoomCh}
 }
 
 func (o *Operator) sendChangeStatus(room Room) {
@@ -58,7 +55,13 @@ func (o *Operator) sendChangeStatus(room Room) {
 }
 
 func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
-	rows, err := o.server.db.Query("SELECT room, description, title, nickname, status, operator FROM room where status=$1", typeRoom)
+	var rows *sql.Rows
+	var err error
+	if typeRoom == roomBusy {
+		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+	} else {
+		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator FROM room where status=$1", typeRoom)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -309,7 +312,7 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
-				//получение комнаты по статусу
+			//получение списка операторов
 			case actionGetOperators:
 				log.Println(actionGetOperators)
 				rows, err := o.server.db.Query("SELECT id, nickname FROM operator")
@@ -327,6 +330,19 @@ func (o *Operator) listenRead() {
 					}
 					operators, _ := json.Marshal(result)
 					msg := ResponseMessage{Action: actionGetOperators, Status: "OK", Code: 200, Body: operators}
+					o.ch <- msg
+				}
+
+			case actionSendID:
+				log.Println(actionSendID)
+				var id auth.OperatorId
+				err := json.Unmarshal(msg.Body, &id)
+				if err == nil {
+					o.Id = id.Id
+					msg := ResponseMessage{Action: actionSendID, Status: "OK", Code: 200}
+					o.ch <- msg
+				} else {
+					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
 					o.ch <- msg
 				}
 
