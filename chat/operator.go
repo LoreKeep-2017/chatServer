@@ -23,6 +23,8 @@ type Operator struct {
 	ch          chan ResponseMessage
 	doneCh      chan bool
 	addToRoomCh chan *Room
+	Nickname    string `json:"nickname"`
+	Fio         string `json:"fio"`
 }
 
 // Create new chat operator.
@@ -41,7 +43,7 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 	doneCh := make(chan bool)
 	addToRoomCh := make(chan *Room, channelBufSize)
 
-	return &Operator{0, ws, server, rooms, ch, doneCh, addToRoomCh}
+	return &Operator{0, ws, server, rooms, ch, doneCh, addToRoomCh, " ", " "}
 }
 
 func (o *Operator) sendChangeStatus(room Room) {
@@ -315,7 +317,7 @@ func (o *Operator) listenRead() {
 			//получение списка операторов
 			case actionGetOperators:
 				log.Println(actionGetOperators)
-				rows, err := o.server.db.Query("SELECT id, nickname FROM operator")
+				rows, err := o.server.db.Query("SELECT id, nickname, fio FROM operator")
 				if err != nil {
 					msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
 					o.ch <- msg
@@ -323,9 +325,10 @@ func (o *Operator) listenRead() {
 					result := make([]Operator, 0)
 					for rows.Next() {
 						var nickanme string
+						var fio string
 						var id int
-						_ = rows.Scan(&id, &nickanme)
-						o := Operator{Id: id}
+						_ = rows.Scan(&id, &nickanme, &fio)
+						o := Operator{Id: id, Nickname: nickanme, Fio: fio}
 						result = append(result, o)
 					}
 					operators, _ := json.Marshal(result)

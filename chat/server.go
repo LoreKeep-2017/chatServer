@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	operatorHandlerPattern = "/api/v1/operator"
-	clientHandlerPattern   = "/api/v1/client"
+	operatorHandlerPattern = "/api/v1/operator/"
+	clientHandlerPattern   = "/api/v1/client/"
 )
 
 // Chat server.
