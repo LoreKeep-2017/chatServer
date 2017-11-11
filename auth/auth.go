@@ -14,11 +14,11 @@ var cookieHandler = securecookie.New(
 	securecookie.GenerateRandomKey(64),
 	securecookie.GenerateRandomKey(32))
 
-func setSession(userName string, response http.ResponseWriter, id int) {
-	value := map[string]string{
-		"name": userName,
-	}
-	if encoded, err := cookieHandler.Encode("session", value); err == nil {
+func setSession(operator OperatorId, response http.ResponseWriter, id int) {
+	// value := map[string]string{
+	// 	"name": userName,
+	// }
+	if encoded, err := cookieHandler.Encode("session", operator); err == nil {
 		cookie := &http.Cookie{
 			Name:  "session",
 			Value: encoded,
@@ -27,7 +27,7 @@ func setSession(userName string, response http.ResponseWriter, id int) {
 		http.SetCookie(response, cookie)
 		response.WriteHeader(http.StatusOK)
 		response.Header().Add("Content-Type", "application/json")
-		operator := OperatorId{id, userName, ""}
+		//operator := OperatorId{id, userName, ""}
 		js, _ := json.Marshal(operator)
 		response.Write(js)
 	}
@@ -46,10 +46,12 @@ func clearSession(response http.ResponseWriter) {
 }
 
 func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
-	value := make(map[string]string)
+	//value := make(map[string]string)
+	var value OperatorId
 	if err := cookieHandler.Decode(cookie.Name, cookie.Value, &value); err == nil {
+		js, _ := json.Marshal(value)
 		response.WriteHeader(http.StatusOK)
-		response.Write([]byte("200 - OK!"))
+		response.Write(js)
 	} else {
 		response.WriteHeader(http.StatusForbidden)
 		response.Write([]byte("403 - Forbidden! "))
@@ -78,7 +80,9 @@ func LoginHandler(response http.ResponseWriter, request *http.Request) {
 			response.Write([]byte("404 - wrong login or password!"))
 		} else {
 			if id > 0 {
-				setSession(operator.Login, response, id)
+				operator.Id = id
+				operator.Password = ""
+				setSession(operator, response, id)
 			} else {
 				response.WriteHeader(http.StatusNotFound)
 				response.Write([]byte("404 - wrong login or password!"))
