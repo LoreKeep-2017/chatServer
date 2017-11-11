@@ -27,7 +27,7 @@ func setSession(userName string, response http.ResponseWriter, id int) {
 		http.SetCookie(response, cookie)
 		response.WriteHeader(http.StatusOK)
 		response.Header().Add("Content-Type", "application/json")
-		operator := OperatorId{id}
+		operator := OperatorId{id, userName, ""}
 		js, _ := json.Marshal(operator)
 		response.Write(js)
 	}
@@ -48,7 +48,6 @@ func clearSession(response http.ResponseWriter) {
 func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
 	value := make(map[string]string)
 	if err := cookieHandler.Decode(cookie.Name, cookie.Value, &value); err == nil {
-		//fmt.Fprintf(w, "The value of foo is %q", value["foo"])
 		response.WriteHeader(http.StatusOK)
 		response.Write([]byte("200 - OK!"))
 	} else {
@@ -58,21 +57,28 @@ func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
 }
 
 func LoginHandler(response http.ResponseWriter, request *http.Request) {
-	name := request.FormValue("login")
-	pass := request.FormValue("password")
-	if name != "" && pass != "" {
+	decoder := json.NewDecoder(request.Body)
+	var operator OperatorId
+	err := decoder.Decode(&operator)
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte("500 - cannot parse json!"))
+		return
+	}
+	defer request.Body.Close()
+	if operator.Login != "" && operator.Password != "" {
 		// .. check credentials ..
 		dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
 		db, _ := sql.Open("postgres", dbinfo)
 		id := 0
 		err := db.QueryRow("SELECT id FROM operator where nickname=$1 and password=$2",
-			name, pass).Scan(&id)
+			operator.Login, operator.Password).Scan(&id)
 		if err != nil {
 			response.WriteHeader(http.StatusNotFound)
 			response.Write([]byte("404 - wrong login or password!"))
 		} else {
 			if id > 0 {
-				setSession(name, response, id)
+				setSession(operator.Login, response, id)
 			} else {
 				response.WriteHeader(http.StatusNotFound)
 				response.Write([]byte("404 - wrong login or password!"))
@@ -101,13 +107,19 @@ func LogoutHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func RegisterHandler(response http.ResponseWriter, request *http.Request) {
-	name := request.FormValue("login")
-	pass := request.FormValue("password")
-	repass := request.FormValue("repeatPassword")
-	if (name != "" && pass != "") || (repass != pass) {
+	decoder := json.NewDecoder(request.Body)
+	var operator OperatorId
+	err := decoder.Decode(&operator)
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte("500 - cannot parse json!"))
+		return
+	}
+	defer request.Body.Close()
+	if operator.Login != "" && operator.Password != "" {
 		dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
 		db, _ := sql.Open("postgres", dbinfo)
-		_, err := db.Query(`insert into operator(nickname, password) values($1, $2)`, name, pass)
+		_, err := db.Query(`insert into operator(nickname, password) values($1, $2)`, operator.Login, operator.Password)
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
 			response.Write([]byte("500 - StatusInternalServerError! " + err.Error()))
