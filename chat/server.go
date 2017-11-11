@@ -118,6 +118,14 @@ func (s *Server) createResponseAllRooms() ResponseMessage {
 	return msg
 }
 
+func (s *Server) sendMessageToOperator(id int, action string, jsonstring []byte) {
+	//response := OperatorResponseRooms{s.rooms, len(s.rooms)}
+	//jsonstring, _ := json.Marshal(response)
+	operator := s.operators[id]
+	msg := ResponseMessage{Action: action, Status: "OK", Code: 200, Body: jsonstring}
+	operator.ch <- msg
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (s *Server) Listen() {
@@ -152,7 +160,7 @@ func (s *Server) Listen() {
 		}()
 
 		operator := NewOperator(ws, s)
-		s.AddOperator(operator)
+		//s.AddOperator(operator)
 		operator.Listen()
 	}
 	http.Handle(clientHandlerPattern, websocket.Handler(onConnected))

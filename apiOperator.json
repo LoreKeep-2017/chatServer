@@ -218,3 +218,25 @@ response{
   "status": "OK",
   "code": 200
 }
+
+
+//перекидывание комнаты
+request
+{
+  "type" : "operator",
+  "action":"changeOperator",
+  "body":  {
+    "to": 26,
+    "rid" : 25
+  }
+}
+response
+{
+  "action": "changeOperator",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "to": 26,
+    "rid": 25
+  }
+}

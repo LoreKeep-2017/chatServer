@@ -151,7 +151,9 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionEnterRoom, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				room := o.server.rooms[rID.ID]
+				room, ok := o.server.rooms[rID.ID]
+
+				log.Println(ok)
 				room.Status = roomBusy
 				room.Operator = o
 				o.rooms[room.Id] = room
@@ -236,7 +238,7 @@ func (o *Operator) listenRead() {
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 403}
+					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 400}
 					o.ch <- msg
 				}
 				if room, ok := o.rooms[rID.ID]; ok {
@@ -342,8 +344,53 @@ func (o *Operator) listenRead() {
 				err := json.Unmarshal(msg.Body, &id)
 				if err == nil {
 					o.Id = id.Id
+					o.server.AddOperator(o)
 					msg := ResponseMessage{Action: actionSendID, Status: "OK", Code: 200}
 					o.ch <- msg
+				} else {
+					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
+					o.ch <- msg
+				}
+
+			case actionChangeOperator:
+				log.Println(actionChangeOperator)
+				var operatorChange OperatorChange
+				err := json.Unmarshal(msg.Body, &operatorChange)
+				if err == nil {
+					//
+
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
+						operatorChange.Room,
+						o.Id,
+					)
+					_, dberr1 := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
+						operatorChange.Room,
+						operatorChange.ID,
+					)
+					_, dberr2 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
+						operatorChange.Room,
+						operatorChange.ID,
+					)
+					response := ResponseMessage{}
+					if (dberr != nil) || (dberr1 != nil) || (dberr2 != nil) {
+						response.Action = actionLeaveRoom
+						response.Status = "db error!"
+						response.Code = 500
+					} else {
+						response.Action = actionChangeOperator
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = msg.Body
+					}
+					o.ch <- response
+					room := o.server.rooms[operatorChange.Room]
+					o.server.operators[operatorChange.ID].rooms[room.Id] = room
+					delete(o.rooms, room.Id)
+					room.Operator = o.server.operators[operatorChange.ID]
+					o.rooms[room.Id] = room
+					jsonstring, _ := json.Marshal(room)
+					o.server.sendMessageToOperator(operatorChange.ID, actionEnterRoom, jsonstring)
+					//
 				} else {
 					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
 					o.ch <- msg
