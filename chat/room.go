@@ -141,6 +141,7 @@ func (r *Room) listenWrite() {
 				response.Body = jsonstring
 
 			}
+			log.Println("chsnge status!!!")
 			r.Client.ch <- response
 			r.server.broadcast(response)
 
