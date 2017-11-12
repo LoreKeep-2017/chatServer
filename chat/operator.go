@@ -151,35 +151,41 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionEnterRoom, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				room, ok := o.server.rooms[rID.ID]
+				log.Println("if clause")
+				if room, ok := o.server.rooms[rID.ID]; ok {
+					log.Println(ok)
+					room.Status = roomBusy
+					room.Operator = o
+					o.rooms[room.Id] = room
+					jsonstring, _ := json.Marshal(room)
+					log.Println(room)
 
-				log.Println(ok)
-				room.Status = roomBusy
-				room.Operator = o
-				o.rooms[room.Id] = room
-				jsonstring, _ := json.Marshal(room)
-
-				_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
-					room.Id,
-					o.Id,
-				)
-				_, dberr1 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
-					room.Id,
-					o.Id,
-				)
-				response := ResponseMessage{}
-				if dberr != nil || dberr1 != nil {
-					response.Action = actionEnterRoom
-					response.Status = dberr.Error() + dberr1.Error()
-					response.Code = 500
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
+						room.Id,
+						o.Id,
+					)
+					_, dberr1 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
+						room.Id,
+						o.Id,
+					)
+					response := ResponseMessage{}
+					if dberr != nil || dberr1 != nil {
+						response.Action = actionEnterRoom
+						response.Status = dberr.Error() + dberr1.Error()
+						response.Code = 500
+					} else {
+						response.Action = actionEnterRoom
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = jsonstring
+						room.channelForStatus <- roomBusy
+					}
+					o.ch <- response
 				} else {
-					response.Action = actionEnterRoom
-					response.Status = "OK"
-					response.Code = 200
-					response.Body = jsonstring
-					room.channelForStatus <- roomBusy
+					msg := ResponseMessage{Action: actionEnterRoom, Status: "Room not found", Code: 404}
+					o.ch <- msg
 				}
-				o.ch <- response
+
 				//msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
 				//o.ch <- msg
 				//room.channelForStatus <- roomBusy
