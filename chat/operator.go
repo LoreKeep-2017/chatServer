@@ -319,24 +319,27 @@ func (o *Operator) listenRead() {
 			//получение списка операторов
 			case actionGetOperators:
 				log.Println(actionGetOperators)
-				rows, err := o.server.db.Query("SELECT id, nickname, fio FROM operator")
-				if err != nil {
-					msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
-					o.ch <- msg
-				} else {
-					result := make([]Operator, 0)
-					for rows.Next() {
-						var nickanme string
-						var fio string
-						var id int
-						_ = rows.Scan(&id, &nickanme, &fio)
-						o := Operator{Id: id, Nickname: nickanme, Fio: fio}
-						result = append(result, o)
-					}
-					operators, _ := json.Marshal(result)
-					msg := ResponseMessage{Action: actionGetOperators, Status: "OK", Code: 200, Body: operators}
-					o.ch <- msg
+				// _, err := o.server.db.Query("SELECT id, nickname, fio FROM operator")
+				// if err != nil {
+				// 	msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
+				// 	o.ch <- msg
+				// } else {
+				result := make([]Operator, 0)
+				for _, v := range o.server.operators {
+					result = append(result, *v)
 				}
+				// for rows.Next() {
+				// 	var nickanme string
+				// 	var fio string
+				// 	var id int
+				// 	_ = rows.Scan(&id, &nickanme, &fio)
+				// 	o := Operator{Id: id, Nickname: nickanme, Fio: fio}
+				// 	result = append(result, o)
+				// }
+				operators, _ := json.Marshal(result)
+				msg := ResponseMessage{Action: actionGetOperators, Status: "OK", Code: 200, Body: operators}
+				o.ch <- msg
+				// }
 
 			case actionSendID:
 				log.Println(actionSendID)
@@ -344,6 +347,8 @@ func (o *Operator) listenRead() {
 				err := json.Unmarshal(msg.Body, &id)
 				if err == nil {
 					o.Id = id.Id
+					o.Fio = id.FIO
+					o.Nickname = id.Login
 					o.server.AddOperator(o)
 					msg := ResponseMessage{Action: actionSendID, Status: "OK", Code: 200}
 					o.ch <- msg

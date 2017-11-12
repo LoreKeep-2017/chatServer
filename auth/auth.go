@@ -73,8 +73,9 @@ func LoginHandler(response http.ResponseWriter, request *http.Request) {
 		dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
 		db, _ := sql.Open("postgres", dbinfo)
 		id := 0
-		err := db.QueryRow("SELECT id FROM operator where nickname=$1 and password=$2",
-			operator.Login, operator.Password).Scan(&id)
+		fio := ""
+		err := db.QueryRow("SELECT id, fio FROM operator where nickname=$1 and password=$2",
+			operator.Login, operator.Password).Scan(&id, &fio)
 		if err != nil {
 			response.WriteHeader(http.StatusNotFound)
 			response.Write([]byte("404 - wrong login or password!"))
@@ -82,6 +83,7 @@ func LoginHandler(response http.ResponseWriter, request *http.Request) {
 			if id > 0 {
 				operator.Id = id
 				operator.Password = ""
+				operator.FIO = fio
 				setSession(operator, response, id)
 			} else {
 				response.WriteHeader(http.StatusNotFound)
