@@ -60,9 +60,9 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
 	var rows *sql.Rows
 	var err error
 	if typeRoom == roomBusy {
-		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, time FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, date FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
-		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, time FROM room where status=$1", typeRoom)
+		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, date FROM room where status=$1", typeRoom)
 	}
 	if err != nil {
 		panic(err)
@@ -75,9 +75,12 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
 		var nickname string
 		var status string
 		var operator int
-		var date int64
+		var date int
+		log.Println()
 		_ = rows.Scan(&room, &description, &title, &nickname, &status, &operator, &date)
+		log.Println(date)
 		r := Room{Id: room, Status: status, Description: description, Title: title, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}, Time: date}
+		log.Println(r.Time, r.Id, r.Status)
 		result[room] = &r
 	}
 	return result

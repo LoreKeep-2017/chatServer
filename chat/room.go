@@ -3,6 +3,7 @@ package chat
 import (
 	"encoding/json"
 	"log"
+	"time"
 )
 
 const (
@@ -28,7 +29,7 @@ type Room struct {
 	Status                string    `json:"status,omitempty"`
 	Description           string    `json:"description,omitempty"`
 	Title                 string    `json:"title,omitempty"`
-	Time                  int64     `json:"time,omitempty"`
+	Time                  int       `json:"time"`
 }
 
 // Create new room.
@@ -107,12 +108,14 @@ func (r *Room) listenWrite() {
 			r.Description = description.Description
 			r.Title = description.Title
 			r.Status = roomNew
-			rows, err := r.server.db.Query(`update room set description=$1, title=$2, status=$3, nickname=$4 where room=$5`,
+			r.Time = int(time.Now().Unix())
+			rows, err := r.server.db.Query(`update room set description=$1, title=$2, status=$3, nickname=$4, date=$6 where room=$5`,
 				r.Description,
 				r.Title,
 				r.Status,
 				description.Nick,
-				r.Id)
+				r.Id,
+				r.Time)
 			if err != nil {
 				panic(err)
 			} else {
