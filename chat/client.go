@@ -137,6 +137,11 @@ func (c *Client) listenRead() {
 				} else {
 					c.Nick = roomDescription.Nick
 					c.room.channelForDescription <- roomDescription
+					timeR := int64(time.Now().Unix())
+					c.room.Time = timeR
+					c.server.db.Query(`update room set time=$1 where room=$2`,
+						timeR,
+						c.room.Id)
 				}
 
 			//закрытие комнаты

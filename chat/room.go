@@ -28,6 +28,7 @@ type Room struct {
 	Status                string    `json:"status,omitempty"`
 	Description           string    `json:"description,omitempty"`
 	Title                 string    `json:"title,omitempty"`
+	Time                  int64     `json:"time,omitempty"`
 }
 
 // Create new room.
