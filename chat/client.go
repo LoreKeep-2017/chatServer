@@ -147,11 +147,73 @@ func (c *Client) listenRead() {
 
 			//получение всех сообщений
 			case actionGetAllMessages:
-				log.Println(actionGetAllMessages)
-				messages, _ := json.Marshal(c.room.Messages)
-				response := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
-				log.Println(response)
-				c.ch <- response
+				// log.Println(actionGetAllMessages)
+				// messages, _ := json.Marshal(c.room.Messages)
+				// response := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
+				// log.Println(response)
+				messages := make([]Message, 0)
+				rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", c.room.Id)
+				if err != nil {
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
+					c.ch <- msg
+				} else {
+					for rows.Next() {
+						var room int
+						var typeM string
+						var date int
+						var body string
+						_ = rows.Scan(&room, &typeM, &date, &body)
+						m := Message{typeM, body, room, date}
+						messages = append(messages, m)
+					}
+					jsonMessages, _ := json.Marshal(messages)
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
+					c.ch <- msg
+				}
+				//c.ch <- response
+
+			case actionRestoreRoom:
+				log.Println(actionRestoreRoom)
+				var room ClientRoom
+				err := json.Unmarshal(msg.Body, &room)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionRestoreRoom, Status: "Invalid Request", Code: 400}
+					c.ch <- msg
+				} else {
+					r, ok := c.server.rooms[room.RoomID]
+					if ok {
+						r.Client = c
+						c.room = r
+						if r.Operator != nil {
+							c.server.operators[r.Operator.Id].rooms[r.Id] = r
+						}
+						c.room.channelForStatus <- roomBusy
+
+						messages := make([]Message, 0)
+						rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)
+						if err != nil {
+							msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
+							c.ch <- msg
+						} else {
+							for rows.Next() {
+								var room int
+								var typeM string
+								var date int
+								var body string
+								_ = rows.Scan(&room, &typeM, &date, &body)
+								m := Message{typeM, body, room, date}
+								messages = append(messages, m)
+							}
+							jsonMessages, _ := json.Marshal(messages)
+							msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
+							c.ch <- msg
+						}
+					} else {
+						msg := ResponseMessage{Action: actionRestoreRoom, Status: "Room not found", Code: 404}
+						c.ch <- msg
+					}
+
+				}
 			}
 		}
 	}

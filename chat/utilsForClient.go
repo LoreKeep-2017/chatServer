@@ -2,6 +2,7 @@ package chat
 
 const (
 	actionSendDescriptionRoom = "sendDescriptionRoom"
+	actionRestoreRoom         = "restoreRoom"
 )
 
 //// Client messages
@@ -14,6 +15,10 @@ type ClientSendDescriptionRoomRequest struct {
 	Description string `json:"description"`
 	Title       string `json:"title"`
 	Nick        string `json:"nick"`
+}
+
+type ClientRoom struct {
+	RoomID int `json:"rid"`
 }
 
 type ClientGreetingResponse struct {
