@@ -1,5 +1,9 @@
 package auth
 
+const (
+	GREATING = "Здарова, чертила!"
+)
+
 type OperatorId struct {
 	Id       int    `json:"id,omitempty"`
 	Login    string `json:"login,omitempty"`
@@ -7,6 +11,6 @@ type OperatorId struct {
 	FIO      string `json:"fio,omitempty"`
 }
 
-const (
-	GREATING = "Здарова, чертила!"
-)
+type Greating struct {
+	Greating string `json:"greating"`
+}
