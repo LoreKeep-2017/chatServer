@@ -56,32 +56,31 @@ func (o *Operator) sendChangeStatus(room Room) {
 	websocket.JSON.Send(o.ws, msg)
 }
 
-func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
+func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 	var rows *sql.Rows
 	var err error
 	if typeRoom == roomBusy {
-		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, date FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
-		rows, err = o.server.db.Query("SELECT room, description, title, nickname, status, operator, date FROM room where status=$1", typeRoom)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1", typeRoom)
 	}
 	if err != nil {
 		panic(err)
 	}
-	result := make(map[int]*Room, 0)
+	result := make(map[int]Room, 0)
 	for rows.Next() {
 		var room int
 		var description string
-		var title string
 		var nickname string
 		var status string
 		var operator int
 		var date int
 		log.Println()
-		_ = rows.Scan(&room, &description, &title, &nickname, &status, &operator, &date)
+		_ = rows.Scan(&room, &description, &date, &nickname, &status, &operator)
 		log.Println(date)
-		r := Room{Id: room, Status: status, Description: description, Title: title, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}, Time: date}
+		r := Room{Id: room, Status: status, Time: date, Description: description, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
 		log.Println(r.Time, r.Id, r.Status)
-		result[room] = &r
+		result[room] = r
 	}
 	return result
 }
@@ -320,7 +319,7 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				} else {
 					result := o.searchRoomByStatus(typeRoom.Type)
-					response := OperatorResponseRooms{result, len(result)}
+					response := OperatorResponseRoomsNew{result, len(result)}
 					rooms, _ := json.Marshal(response)
 					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}
 					o.ch <- msg

@@ -2,6 +2,7 @@ package chat
 
 const (
 	actionSendDescriptionRoom = "sendDescriptionRoom"
+	actionSendFirstMessage    = "sendFirstMessage"
 	actionRestoreRoom         = "restoreRoom"
 )
 

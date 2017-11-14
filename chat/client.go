@@ -126,6 +126,36 @@ func (c *Client) listenRead() {
 					c.ch <- msg
 				}
 
+				//отправка сообщений
+			case actionSendFirstMessage:
+				log.Println(actionSendFirstMessage)
+				var message Message
+				err := json.Unmarshal(msg.Body, &message)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Invalid Request", Code: 403}
+					c.ch <- msg
+				}
+				if (c.room != nil) || (c.room.Status != roomBusy) || (c.room.Status != roomClose) {
+					message.Author = "client"
+					message.Room = c.room.Id
+					message.Time = int(time.Now().Unix())
+					c.room.Time = int(time.Now().Unix())
+					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
+						message.Body,
+						c.room.Time,
+						c.room.Id,
+					)
+					if err != nil {
+						msg := ResponseMessage{Action: actionSendMessage, Status: "db error", Code: 502}
+						c.ch <- msg
+					}
+					c.room.channelForStatus <- roomNew
+					c.room.channelForMessage <- message
+				} else {
+					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
+					c.ch <- msg
+				}
+
 			//описание комнаты
 			case actionSendDescriptionRoom:
 				log.Println(actionSendDescriptionRoom)

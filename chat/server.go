@@ -160,7 +160,7 @@ func (s *Server) Listen() {
 		}()
 
 		operator := NewOperator(ws, s)
-		//s.AddOperator(operator)
+		s.AddOperator(operator)
 		operator.Listen()
 	}
 	http.Handle(clientHandlerPattern, websocket.Handler(onConnected))

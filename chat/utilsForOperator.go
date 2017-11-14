@@ -36,6 +36,11 @@ type OperatorResponseRooms struct {
 	Size int           `json:"size"`
 }
 
+type OperatorResponseRoomsNew struct {
+	Room map[int]Room `json:"rooms"`
+	Size int          `json:"size"`
+}
+
 type RequestActionWithRoom struct {
 	ID int `json:"rid"`
 }

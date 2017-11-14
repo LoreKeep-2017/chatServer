@@ -146,8 +146,8 @@ func (r *Room) listenWrite() {
 
 			}
 			log.Println("chsnge status!!!")
-			r.Client.ch <- response
 			r.server.broadcast(response)
+			r.Client.ch <- response
 
 		}
 	}
