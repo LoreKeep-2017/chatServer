@@ -4,6 +4,8 @@ const (
 	actionSendDescriptionRoom = "sendDescriptionRoom"
 	actionSendFirstMessage    = "sendFirstMessage"
 	actionRestoreRoom         = "restoreRoom"
+	actionSendNickname        = "sendNickname"
+	actionGetNickname         = "getNickname"
 )
 
 //// Client messages
@@ -25,4 +27,8 @@ type ClientRoom struct {
 type ClientGreetingResponse struct {
 	Action string `json:"action"`
 	Msg    string `json:"data"`
+}
+
+type ClientNickname struct {
+	Nickname string `json:"nickname"`
 }

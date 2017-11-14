@@ -185,3 +185,46 @@ response
     "time": 1510611217
   }
 }
+
+// отправка первого сообщения клиента
+{
+  "type":"client",
+  "action" : "sendFirstMessage",
+  "body" : {
+    "author" : "client",
+    "body": "сsssss"
+  }
+}
+
+//отправка никнейм
+{
+  "type":"client",
+  "action" : "sendNickname",
+  "body" : {
+    "nickname" : "clientqqqqqqqqqq"
+  }
+}
+response
+{
+  "action": "sendNickname",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "nickname": "clientqqqqqqqqqq"
+  }
+}
+
+//get nickanme
+{
+  "type":"client",
+  "action" : "getNickname"
+}
+response
+{
+  "action": "getNickname",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "nickname": "clientqqqqqqqqqq"
+  }
+}

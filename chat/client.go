@@ -132,7 +132,7 @@ func (c *Client) listenRead() {
 				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionSendMessage, Status: "Invalid Request", Code: 403}
+					msg := ResponseMessage{Action: actionSendFirstMessage, Status: "Invalid Request", Code: 403}
 					c.ch <- msg
 				}
 				if (c.room != nil) || (c.room.Status != roomBusy) || (c.room.Status != roomClose) {
@@ -146,13 +146,13 @@ func (c *Client) listenRead() {
 						c.room.Id,
 					)
 					if err != nil {
-						msg := ResponseMessage{Action: actionSendMessage, Status: "db error", Code: 502}
+						msg := ResponseMessage{Action: actionSendFirstMessage, Status: "db error", Code: 502}
 						c.ch <- msg
 					}
 					c.room.channelForStatus <- roomNew
 					c.room.channelForMessage <- message
 				} else {
-					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
+					msg := ResponseMessage{Action: actionSendFirstMessage, Status: "Room not found", Code: 404}
 					c.ch <- msg
 				}
 
@@ -174,6 +174,44 @@ func (c *Client) listenRead() {
 				log.Println(actionCloseRoom)
 				c.room.Status = roomClose
 				c.room.channelForStatus <- roomClose
+
+			//
+			case actionSendNickname:
+				log.Println(actionSendNickname)
+				var nickname ClientNickname
+				err := json.Unmarshal(msg.Body, &nickname)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendNickname, Status: "Invalid Request", Code: 400}
+					c.ch <- msg
+				} else {
+					c.Nick = nickname.Nickname
+					rows, err := c.server.db.Query(`update room set nickname=$1 where room=$2`,
+						nickname.Nickname,
+						c.room.Id,
+					)
+					if err != nil {
+						panic(err)
+					} else {
+						log.Println(rows.Columns())
+						js, _ := json.Marshal(nickname)
+						msg := ResponseMessage{Action: actionSendNickname, Status: "OK", Code: 200, Body: js}
+						c.ch <- msg
+					}
+				}
+
+				//
+			case actionGetNickname:
+				log.Println(actionGetNickname)
+				var nickname string
+				log.Println(c.room.Id)
+				_ = c.server.db.QueryRow("SELECT nickname FROM room WHERE room=?", c.room.Id).Scan(&nickname)
+				log.Println(nickname)
+				var n ClientNickname
+				n.Nickname = c.Nick
+				js, _ := json.Marshal(n)
+				msg := ResponseMessage{Action: actionGetNickname, Status: "OK", Code: 200, Body: js}
+				c.ch <- msg
+				//}
 
 			//получение всех сообщений
 			case actionGetAllMessages:
