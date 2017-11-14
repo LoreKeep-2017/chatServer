@@ -6,3 +6,7 @@ type OperatorId struct {
 	Password string `json:"password,omitempty"`
 	FIO      string `json:"fio,omitempty"`
 }
+
+const (
+	GREATING = "Здарова, чертила!"
+)

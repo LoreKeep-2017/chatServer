@@ -22,6 +22,7 @@ func main() {
 	http.HandleFunc("/api/v1/login/", auth.LoginHandler)
 	http.HandleFunc("/api/v1/loggedin/", auth.LoggedinHandler)
 	http.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
+	http.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
