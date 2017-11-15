@@ -298,6 +298,7 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 	size := request.URL.Query().Get("size")
 
 	if len(id) < 1 || len(size) < 1 {
+		response.Header().Set("Access-Control-Allow-Origin", "*")
 		response.WriteHeader(http.StatusBadRequest)
 		response.Write([]byte("missing params"))
 		return
@@ -311,11 +312,13 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 	var dbSize int
 	db.QueryRow("SELECT count(*) FROM message where room=$1", id).Scan(&dbSize)
 	if dbSize == s {
+		response.Header().Set("Access-Control-Allow-Origin", "*")
 		response.WriteHeader(http.StatusOK)
 	} else {
 
 		diff := dbSize - s
 		if diff < 0 {
+			response.Header().Set("Access-Control-Allow-Origin", "*")
 			response.WriteHeader(http.StatusOK)
 			return
 		}
@@ -336,6 +339,7 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 			jsonMessages, _ := json.Marshal(messages)
 			msg := ResponseMessage{Action: "getDiff", Status: "OK", Code: 200, Body: jsonMessages}
 			js, _ := json.Marshal(msg)
+			response.Header().Set("Access-Control-Allow-Origin", "*")
 			response.WriteHeader(http.StatusOK)
 			response.Write(js)
 		}
