@@ -1,10 +1,16 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/LoreKeep-2017/chatServer/db"
 
 	"golang.org/x/net/websocket"
 )
@@ -285,4 +291,56 @@ func (c *Client) listenRead() {
 			}
 		}
 	}
+}
+
+func DiffHandler(response http.ResponseWriter, request *http.Request) {
+	id := request.URL.Query().Get("id")
+	size := request.URL.Query().Get("size")
+
+	if len(id) < 1 || len(size) < 1 {
+		response.WriteHeader(http.StatusBadRequest)
+		response.Write([]byte("missing params"))
+		return
+	}
+	s, _ := strconv.Atoi(size)
+
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
+	db, _ := sql.Open("postgres", dbinfo)
+
+	messages := make([]Message, 0)
+	var dbSize int
+	db.QueryRow("SELECT count(*) FROM message where room=$1", id).Scan(&dbSize)
+	if dbSize == s {
+		response.WriteHeader(http.StatusOK)
+	} else {
+
+		diff := dbSize - s
+		if diff < 0 {
+			response.WriteHeader(http.StatusOK)
+			return
+		}
+		rows, err := db.Query("SELECT room, type, date, body FROM message where room=$1 order by date desc limit $2", id, diff)
+		if err != nil {
+			response.WriteHeader(http.StatusInternalServerError)
+			response.Write([]byte(err.Error()))
+		} else {
+			for rows.Next() {
+				var room int
+				var typeM string
+				var date int
+				var body string
+				_ = rows.Scan(&room, &typeM, &date, &body)
+				m := Message{typeM, body, room, date}
+				messages = append(messages, m)
+			}
+			jsonMessages, _ := json.Marshal(messages)
+			msg := ResponseMessage{Action: "getDiff", Status: "OK", Code: 200, Body: jsonMessages}
+			js, _ := json.Marshal(msg)
+			response.WriteHeader(http.StatusOK)
+			response.Write(js)
+		}
+		//c.ch <-
+	}
+	//response.WriteHeader(http.StatusOK)
+	// response.Write(js)
 }

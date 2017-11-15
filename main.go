@@ -23,6 +23,7 @@ func main() {
 	http.HandleFunc("/api/v1/loggedin/", auth.LoggedinHandler)
 	http.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
 	http.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
+	http.HandleFunc("/api/v1/diff/", chat.DiffHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
