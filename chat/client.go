@@ -141,7 +141,7 @@ func (c *Client) listenRead() {
 					msg := ResponseMessage{Action: actionSendFirstMessage, Status: "Invalid Request", Code: 403}
 					c.ch <- msg
 				}
-				if (c.room != nil) || (c.room.Status != roomBusy) || (c.room.Status != roomClose) {
+				if (c.room != nil) || (c.room.Status != roomRecieved) || (c.room.Status != roomSend) {
 					message.Author = "client"
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
@@ -160,19 +160,6 @@ func (c *Client) listenRead() {
 				} else {
 					msg := ResponseMessage{Action: actionSendFirstMessage, Status: "Room not found", Code: 404}
 					c.ch <- msg
-				}
-
-			//описание комнаты
-			case actionSendDescriptionRoom:
-				log.Println(actionSendDescriptionRoom)
-				var roomDescription ClientSendDescriptionRoomRequest
-				err := json.Unmarshal(msg.Body, &roomDescription)
-				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionSendDescriptionRoom, Status: "Invalid Request", Code: 403}
-					c.ch <- msg
-				} else {
-					c.Nick = roomDescription.Nick
-					c.room.channelForDescription <- roomDescription
 				}
 
 			//закрытие комнаты

@@ -3,7 +3,6 @@ package chat
 import (
 	"encoding/json"
 	"log"
-	"time"
 )
 
 const (
@@ -20,18 +19,17 @@ const (
 
 // Chat operator.
 type Room struct {
-	Id                    int `json:"id"`
-	channelForMessage     chan Message
-	channelForDescription chan ClientSendDescriptionRoomRequest
-	channelForStatus      chan string
-	server                *Server
-	Client                *Client   `json:"client,omitempty"`
-	Operator              *Operator `json:"operator,omitempty"`
-	Messages              []Message `json:"messages"`
-	Status                string    `json:"status,omitempty"`
-	Description           string    `json:"description,omitempty"`
-	Title                 string    `json:"title,omitempty"`
-	Time                  int       `json:"time"`
+	Id                int `json:"id"`
+	channelForMessage chan Message
+	channelForStatus  chan string
+	server            *Server
+	Client            *Client   `json:"client,omitempty"`
+	Operator          *Operator `json:"operator,omitempty"`
+	Messages          []Message `json:"messages,omitempty"`
+	Status            string    `json:"status,omitempty"`
+	Description       string    `json:"description,omitempty"`
+	LastMessage       string    `json:"lastMessage,omitempty"`
+	Time              int       `json:"time"`
 }
 
 // Create new room.
@@ -44,19 +42,17 @@ func NewRoom(server *Server) *Room {
 	}
 
 	ch := make(chan Message, roomChannelBufSize)
-	channelForDescription := make(chan ClientSendDescriptionRoomRequest)
 	channelForStatus := make(chan string, roomChannelBufSize)
 	messages := make([]Message, 0)
 	status := roomNotActive
 
 	return &Room{
-		Id:                    roomId,
-		channelForMessage:     ch,
-		channelForStatus:      channelForStatus,
-		server:                server,
-		channelForDescription: channelForDescription,
-		Messages:              messages,
-		Status:                status}
+		Id:                roomId,
+		channelForMessage: ch,
+		channelForStatus:  channelForStatus,
+		server:            server,
+		Messages:          messages,
+		Status:            status}
 }
 
 // Listen Write and Read request via chanel
@@ -79,6 +75,10 @@ func (r *Room) listenWrite() {
 				msg.Author,
 				msg.Time,
 				msg.Body,
+			)
+			_, err = r.server.db.Query(`update room set lastmessage=$1 where room=$2`,
+				msg.Body,
+				r.Id,
 			)
 			var response ResponseMessage
 			messages := make([]Message, 0)
@@ -108,29 +108,6 @@ func (r *Room) listenWrite() {
 			if r.Operator != nil {
 				r.Operator.ch <- response
 			}
-
-		//добавление описание комнате
-		case description := <-r.channelForDescription:
-			r.Description = description.Description
-			r.Title = description.Title
-			r.Status = roomNew
-			r.Time = int(time.Now().Unix())
-			rows, err := r.server.db.Query(`update room set description=$1, title=$2, status=$3, nickname=$4, date=$6 where room=$5`,
-				r.Description,
-				r.Title,
-				r.Status,
-				description.Nick,
-				r.Id,
-				r.Time)
-			if err != nil {
-				panic(err)
-			} else {
-				log.Println(rows.Columns())
-			}
-			msg, _ := json.Marshal(r)
-			response := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: msg}
-			r.Client.ch <- response
-			r.server.broadcast(response)
 
 		//изменения статуса комнаты
 		case msg := <-r.channelForStatus:

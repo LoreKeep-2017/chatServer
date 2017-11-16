@@ -23,8 +23,8 @@ type Operator struct {
 	ch          chan ResponseMessage
 	doneCh      chan bool
 	addToRoomCh chan *Room
-	Nickname    string `json:"nickname"`
-	Fio         string `json:"fio"`
+	Nickname    string `json:"nickname,omitempty"`
+	Fio         string `json:"fio,omitempty"`
 }
 
 // Create new chat operator.
@@ -60,9 +60,9 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 	var rows *sql.Rows
 	var err error
 	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
-		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, nickname FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
-		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1", typeRoom)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator,  nickname FROM room where status=$1", typeRoom)
 	}
 	if err != nil {
 		panic(err)
@@ -75,11 +75,12 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 		var status string
 		var operator int
 		var date int
+		var lastMessgae string
 		log.Println()
-		_ = rows.Scan(&room, &description, &date, &status, &nickname, &operator)
-		log.Println(date)
-		r := Room{Id: room, Status: status, Time: date, Description: description, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
-		log.Println(r.Time, r.Id, r.Status)
+		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
+		log.Println(lastMessgae)
+		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
+		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
 		result[room] = r
 	}
 	return result

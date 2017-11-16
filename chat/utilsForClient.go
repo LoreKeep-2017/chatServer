@@ -14,12 +14,6 @@ type ClientSendMessageRequest struct {
 	Msg string `json:"msg"`
 }
 
-type ClientSendDescriptionRoomRequest struct {
-	Description string `json:"description"`
-	Title       string `json:"title"`
-	Nick        string `json:"nick"`
-}
-
 type ClientRoom struct {
 	RoomID int `json:"rid"`
 }
