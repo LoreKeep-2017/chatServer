@@ -20,7 +20,7 @@ func main() {
 
 	http.HandleFunc("/api/v1/register/", auth.RegisterHandler)
 	http.HandleFunc("/api/v1/login/", server.LoginHandler)
-	http.HandleFunc("/api/v1/loggedin/", auth.LoggedinHandler)
+	http.HandleFunc("/api/v1/loggedin/", server.LoggedinHandler)
 	http.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
 	http.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
 	http.HandleFunc("/api/v1/diff/", chat.DiffHandler)

@@ -53,3 +53,31 @@ func (s *Server) LoginHandler(response http.ResponseWriter, request *http.Reques
 		response.Write([]byte("400 - empty login or password!"))
 	}
 }
+
+func (s *Server) checkSession(response http.ResponseWriter, cookie *http.Cookie) {
+	var value OperatorId
+	if err := auth.CookieHandler.Decode(cookie.Name, cookie.Value, &value); err == nil {
+		if _, ok := s.operators[value.Id]; ok {
+			response.WriteHeader(http.StatusConflict)
+			response.Write([]byte("409 - session alredy exist!"))
+			return
+		}
+		js, _ := json.Marshal(value)
+		response.WriteHeader(http.StatusOK)
+		response.Write(js)
+	} else {
+		response.WriteHeader(http.StatusForbidden)
+		response.Write([]byte("403 - Forbidden! "))
+	}
+}
+
+func (s *Server) LoggedinHandler(response http.ResponseWriter, request *http.Request) {
+	cookie, err := request.Cookie("session")
+	if err == nil {
+		s.checkSession(response, cookie)
+	} else {
+		response.WriteHeader(http.StatusUnauthorized)
+		response.Write([]byte("401 - Unauthorized!"))
+	}
+
+}

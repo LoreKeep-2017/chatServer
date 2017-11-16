@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/securecookie"
 )
 
-var cookieHandler = securecookie.New(
+var CookieHandler = securecookie.New(
 	securecookie.GenerateRandomKey(64),
 	securecookie.GenerateRandomKey(32))
 
@@ -18,7 +18,7 @@ func SetSession(operator OperatorId, response http.ResponseWriter, id int) {
 	// value := map[string]string{
 	// 	"name": userName,
 	// }
-	if encoded, err := cookieHandler.Encode("session", operator); err == nil {
+	if encoded, err := CookieHandler.Encode("session", operator); err == nil {
 		cookie := &http.Cookie{
 			Name:  "session",
 			Value: encoded,
@@ -45,18 +45,17 @@ func clearSession(response http.ResponseWriter) {
 	response.Write([]byte("200 - Ok!"))
 }
 
-func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
-	//value := make(map[string]string)
-	var value OperatorId
-	if err := cookieHandler.Decode(cookie.Name, cookie.Value, &value); err == nil {
-		js, _ := json.Marshal(value)
-		response.WriteHeader(http.StatusOK)
-		response.Write(js)
-	} else {
-		response.WriteHeader(http.StatusForbidden)
-		response.Write([]byte("403 - Forbidden! "))
-	}
-}
+// func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
+// 	var value OperatorId
+// 	if err := cookieHandler.Decode(cookie.Name, cookie.Value, &value); err == nil {
+// 		js, _ := json.Marshal(value)
+// 		response.WriteHeader(http.StatusOK)
+// 		response.Write(js)
+// 	} else {
+// 		response.WriteHeader(http.StatusForbidden)
+// 		response.Write([]byte("403 - Forbidden! "))
+// 	}
+// }
 
 // func LoginHandler(response http.ResponseWriter, request *http.Request) {
 // 	decoder := json.NewDecoder(request.Body)
@@ -97,16 +96,16 @@ func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
 // 	}
 // }
 
-func LoggedinHandler(response http.ResponseWriter, request *http.Request) {
-	cookie, err := request.Cookie("session")
-	if err == nil {
-		checkSession(response, cookie)
-	} else {
-		response.WriteHeader(http.StatusUnauthorized)
-		response.Write([]byte("401 - Unauthorized!"))
-	}
-
-}
+// func LoggedinHandler(response http.ResponseWriter, request *http.Request) {
+// 	cookie, err := request.Cookie("session")
+// 	if err == nil {
+// 		checkSession(response, cookie)
+// 	} else {
+// 		response.WriteHeader(http.StatusUnauthorized)
+// 		response.Write([]byte("401 - Unauthorized!"))
+// 	}
+//
+// }
 
 func LogoutHandler(response http.ResponseWriter, request *http.Request) {
 	clearSession(response)
