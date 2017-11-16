@@ -7,13 +7,15 @@ import (
 )
 
 const (
-	roomChannelBufSize = 1
+	roomChannelBufSize = 100
 	//статусы
 	roomNotActive  = "roomNotActive"
 	roomNew        = "roomNew"
 	roomBusy       = "roomBusy"
 	roomInProgress = "roomInProgress"
 	roomClose      = "roomClose"
+	roomSend       = "roomSend"
+	roomRecieved   = "roomRecieved"
 )
 
 // Chat operator.
@@ -43,7 +45,7 @@ func NewRoom(server *Server) *Room {
 
 	ch := make(chan Message, roomChannelBufSize)
 	channelForDescription := make(chan ClientSendDescriptionRoomRequest)
-	channelForStatus := make(chan string)
+	channelForStatus := make(chan string, roomChannelBufSize)
 	messages := make([]Message, 0)
 	status := roomNotActive
 
@@ -70,6 +72,7 @@ func (r *Room) listenWrite() {
 
 		// отправка сообщений участникам комнаты
 		case msg := <-r.channelForMessage:
+			log.Println("channelForMessage")
 			//r.Messages = append(r.Messages, msg)
 			_, err := r.server.db.Query(`insert into message(room, type, date, body) values($1, $2, $3, $4)`,
 				r.Id,
@@ -94,6 +97,9 @@ func (r *Room) listenWrite() {
 				}
 				jsonMessages, _ := json.Marshal(messages)
 				response = ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: jsonMessages}
+			}
+			if msg.Author == "client" && r.Operator != nil {
+				r.channelForStatus <- roomRecieved
 			}
 			log.Println(response)
 			if r.Client != nil {
@@ -146,8 +152,12 @@ func (r *Room) listenWrite() {
 
 			}
 			log.Println("chsnge status!!!")
-			r.server.broadcast(response)
-			r.Client.ch <- response
+			if msg == roomRecieved || msg == roomSend {
+				r.server.sendMessageToOperator(r.Operator.Id, actionChangeStatusRooms, jsonstring)
+			} else {
+				r.server.broadcast(response)
+				r.Client.ch <- response
+			}
 
 		}
 	}

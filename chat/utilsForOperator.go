@@ -6,7 +6,7 @@ import "log"
 const (
 	actionGetAllRooms      = "getAllRooms"
 	actionEnterRoom        = "enterRoom"
-	actionLeaveRoom        = "leaveRoom"
+	actionRoomStatusSend   = "roomStatusSend"
 	actionGetRoomsByStatus = "getRoomsByStatus"
 	actionGetOperators     = "getOperators"
 	actionSendID           = "sendId"

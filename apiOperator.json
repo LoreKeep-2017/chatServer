@@ -98,7 +98,7 @@ response
 request
 {
   "type" : "operator",
-  "action":"leaveRoom",
+  "action":"roomStatusSend",
   "body":  {
     "rid" : 1
   }
@@ -106,7 +106,7 @@ request
 
 response
 {
-  "action": "changeStatusRoom",
+  "action": "roomStatusSend",
   "status": "OK",
   "code": 200,
   "body": {

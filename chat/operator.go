@@ -59,7 +59,7 @@ func (o *Operator) sendChangeStatus(room Room) {
 func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 	var rows *sql.Rows
 	var err error
-	if typeRoom == roomBusy {
+	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
 		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
 		rows, err = o.server.db.Query("SELECT room, description, date, status, nickname, operator FROM room where status=$1", typeRoom)
@@ -157,11 +157,12 @@ func (o *Operator) listenRead() {
 				log.Println("if clause")
 				if room, ok := o.server.rooms[rID.ID]; ok {
 					log.Println(ok)
-					room.Status = roomBusy
+					room.Status = roomRecieved
 					room.Operator = o
 					o.rooms[room.Id] = room
 					jsonstring, _ := json.Marshal(room)
 					log.Println(room)
+					log.Println(o.server.db)
 
 					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
 						room.Id,
@@ -172,16 +173,22 @@ func (o *Operator) listenRead() {
 						o.Id,
 					)
 					response := ResponseMessage{}
-					if dberr != nil || dberr1 != nil {
+					if dberr != nil {
 						response.Action = actionEnterRoom
-						response.Status = dberr.Error() + dberr1.Error()
+						response.Status = dberr.Error()
+						response.Code = 500
+					} else if dberr1 != nil {
+						response.Action = actionEnterRoom
+						response.Status = dberr1.Error()
 						response.Code = 500
 					} else {
 						response.Action = actionEnterRoom
 						response.Status = "OK"
 						response.Code = 200
 						response.Body = jsonstring
-						room.channelForStatus <- roomBusy
+					}
+					if response.Code == 200 {
+						room.channelForStatus <- roomRecieved
 					}
 					o.ch <- response
 				} else {
@@ -206,6 +213,7 @@ func (o *Operator) listenRead() {
 				message.Author = "operator"
 				room, ok := o.rooms[message.Room]
 				if ok {
+					log.Println(message)
 					room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
@@ -241,37 +249,28 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
-			//покидание комнаты
-			case actionLeaveRoom:
-				log.Println(actionLeaveRoom)
+				//
+			case actionRoomStatusSend:
+				log.Println(actionRoomStatusSend)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 400}
+					msg := ResponseMessage{Action: actionRoomStatusSend, Status: "Invalid Request", Code: 400}
 					o.ch <- msg
 				}
 				if room, ok := o.rooms[rID.ID]; ok {
-					room.Status = roomInProgress
-					delete(o.rooms, room.Id)
-					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
-						room.Id,
-						o.Id,
-					)
+					room.Status = roomSend
 					response := ResponseMessage{}
-					if dberr != nil {
-						response.Action = actionLeaveRoom
-						response.Status = dberr.Error()
-						response.Code = 500
-					} else {
-						response.Action = actionLeaveRoom
-						response.Status = "OK"
-						response.Code = 200
-						response.Body = msg.Body
-					}
+
+					response.Action = actionRoomStatusSend
+					response.Status = "OK"
+					response.Code = 200
+					response.Body = msg.Body
+
 					o.ch <- response
-					room.channelForStatus <- roomInProgress
+					room.channelForStatus <- roomSend
 				} else {
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Room not found", Code: 404, Body: msg.Body}
+					msg := ResponseMessage{Action: actionRoomStatusSend, Status: "Room not found", Code: 404, Body: msg.Body}
 					o.ch <- msg
 				}
 
@@ -387,7 +386,7 @@ func (o *Operator) listenRead() {
 					)
 					response := ResponseMessage{}
 					if (dberr != nil) || (dberr1 != nil) || (dberr2 != nil) {
-						response.Action = actionLeaveRoom
+						response.Action = actionChangeOperator
 						response.Status = "db error!"
 						response.Code = 500
 					} else {
