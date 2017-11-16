@@ -76,7 +76,7 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 		var operator int
 		var date int
 		log.Println()
-		_ = rows.Scan(&room, &description, &date, &nickname, &status, &operator)
+		_ = rows.Scan(&room, &description, &date, &status, &nickname, &operator)
 		log.Println(date)
 		r := Room{Id: room, Status: status, Time: date, Description: description, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
 		log.Println(r.Time, r.Id, r.Status)
