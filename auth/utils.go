@@ -1,7 +1,7 @@
 package auth
 
 const (
-	GREATING = "Здаровствуйте! Как я могу Вам помочь?"
+	GREATING = "Здрaвствуйте! Как я могу Вам помочь?"
 )
 
 type OperatorId struct {
