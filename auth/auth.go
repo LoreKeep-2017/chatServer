@@ -14,7 +14,7 @@ var cookieHandler = securecookie.New(
 	securecookie.GenerateRandomKey(64),
 	securecookie.GenerateRandomKey(32))
 
-func setSession(operator OperatorId, response http.ResponseWriter, id int) {
+func SetSession(operator OperatorId, response http.ResponseWriter, id int) {
 	// value := map[string]string{
 	// 	"name": userName,
 	// }
@@ -58,44 +58,44 @@ func checkSession(response http.ResponseWriter, cookie *http.Cookie) {
 	}
 }
 
-func LoginHandler(response http.ResponseWriter, request *http.Request) {
-	decoder := json.NewDecoder(request.Body)
-	var operator OperatorId
-	err := decoder.Decode(&operator)
-	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
-		response.Write([]byte("500 - cannot parse json!"))
-		return
-	}
-	defer request.Body.Close()
-	if operator.Login != "" && operator.Password != "" {
-		// .. check credentials ..
-		dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
-		db, _ := sql.Open("postgres", dbinfo)
-		id := 0
-		fio := ""
-		err := db.QueryRow("SELECT id, fio FROM operator where nickname=$1 and password=$2",
-			operator.Login, operator.Password).Scan(&id, &fio)
-		if err != nil {
-			response.WriteHeader(http.StatusNotFound)
-			response.Write([]byte("404 - wrong login or password!"))
-		} else {
-			if id > 0 {
-				operator.Id = id
-				operator.Password = ""
-				operator.FIO = fio
-				setSession(operator, response, id)
-			} else {
-				response.WriteHeader(http.StatusNotFound)
-				response.Write([]byte("404 - wrong login or password!"))
-			}
-		}
-
-	} else {
-		response.WriteHeader(http.StatusBadRequest)
-		response.Write([]byte("400 - empty login or password!"))
-	}
-}
+// func LoginHandler(response http.ResponseWriter, request *http.Request) {
+// 	decoder := json.NewDecoder(request.Body)
+// 	var operator OperatorId
+// 	err := decoder.Decode(&operator)
+// 	if err != nil {
+// 		response.WriteHeader(http.StatusInternalServerError)
+// 		response.Write([]byte("500 - cannot parse json!"))
+// 		return
+// 	}
+// 	defer request.Body.Close()
+// 	if operator.Login != "" && operator.Password != "" {
+// 		// .. check credentials ..
+// 		dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
+// 		db, _ := sql.Open("postgres", dbinfo)
+// 		id := 0
+// 		fio := ""
+// 		err := db.QueryRow("SELECT id, fio FROM operator where nickname=$1 and password=$2",
+// 			operator.Login, operator.Password).Scan(&id, &fio)
+// 		if err != nil {
+// 			response.WriteHeader(http.StatusNotFound)
+// 			response.Write([]byte("404 - wrong login or password!"))
+// 		} else {
+// 			if id > 0 {
+// 				operator.Id = id
+// 				operator.Password = ""
+// 				operator.FIO = fio
+// 				setSession(operator, response, id)
+// 			} else {
+// 				response.WriteHeader(http.StatusNotFound)
+// 				response.Write([]byte("404 - wrong login or password!"))
+// 			}
+// 		}
+//
+// 	} else {
+// 		response.WriteHeader(http.StatusBadRequest)
+// 		response.Write([]byte("400 - empty login or password!"))
+// 	}
+// }
 
 func LoggedinHandler(response http.ResponseWriter, request *http.Request) {
 	cookie, err := request.Cookie("session")

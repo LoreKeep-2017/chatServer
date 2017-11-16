@@ -7,8 +7,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/LoreKeep-2017/chatServer/auth"
-
 	"golang.org/x/net/websocket"
 )
 
@@ -352,7 +350,7 @@ func (o *Operator) listenRead() {
 
 			case actionSendID:
 				log.Println(actionSendID)
-				var id auth.OperatorId
+				var id OperatorId
 				err := json.Unmarshal(msg.Body, &id)
 				if err == nil {
 					o.Id = id.Id

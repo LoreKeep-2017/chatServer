@@ -57,3 +57,9 @@ type OperatorChange struct {
 	ID   int `json:"to"`
 	Room int `json:"rid"`
 }
+
+type OperatorId struct {
+	Id    int    `json:"id,omitempty"`
+	Login string `json:"login,omitempty"`
+	FIO   string `json:"fio,omitempty"`
+}
