@@ -142,7 +142,7 @@ func (s *Server) Listen() {
 		}()
 
 		room := NewRoom(s)
-		client := NewClient(ws, s, "nick", room)
+		client := NewClient(ws, s, room)
 		room.Client = client
 		s.rooms[room.Id] = room
 		s.Add(client)
