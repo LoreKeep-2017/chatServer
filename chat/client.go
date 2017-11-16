@@ -190,6 +190,11 @@ func (c *Client) listenRead() {
 						js, _ := json.Marshal(nickname)
 						msg := ResponseMessage{Action: actionSendNickname, Status: "OK", Code: 200, Body: js}
 						c.ch <- msg
+						nickname.Rid = c.room.Id
+						jsonstring, _ := json.Marshal(nickname)
+						msg.Action = "updateInfo"
+						msg.Body = jsonstring
+						c.room.server.broadcast(msg)
 					}
 				}
 

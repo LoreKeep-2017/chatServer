@@ -25,4 +25,5 @@ type ClientGreetingResponse struct {
 
 type ClientNickname struct {
 	Nickname string `json:"nickname"`
+	Rid      int    `json:"rid,omitempty"`
 }
