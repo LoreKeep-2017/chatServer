@@ -80,6 +80,7 @@ func (r *Room) listenWrite() {
 				msg.Body,
 				r.Id,
 			)
+			r.LastMessage = msg.Body
 			var response ResponseMessage
 			messages := make([]Message, 0)
 			rows, err := r.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)

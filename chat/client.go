@@ -146,6 +146,7 @@ func (c *Client) listenRead() {
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
 					c.room.Time = int(time.Now().Unix())
+					c.room.LastMessage = message.Body
 					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
 						message.Body,
 						c.room.Time,
