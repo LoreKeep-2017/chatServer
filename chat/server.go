@@ -178,13 +178,13 @@ func (s *Server) Listen() {
 			// del a client
 		case c := <-s.delCh:
 
-			log.Println("Delete client", c.room)
-			c.room.Status = roomClose
-			c.room.channelForStatus <- roomClose
-			if c.room.Operator != nil {
-				log.Println("rooms", c.room.Operator.rooms)
-				delete(c.room.Operator.rooms, c.room.Id)
-			}
+			// log.Println("Delete client", c.room)
+			// c.room.Status = roomClose
+			// c.room.channelForStatus <- roomClose
+			// if c.room.Operator != nil {
+			// 	log.Println("rooms", c.room.Operator.rooms)
+			// 	delete(c.room.Operator.rooms, c.room.Id)
+			// }
 
 		// Add new a operator
 		case o := <-s.addOCh:
