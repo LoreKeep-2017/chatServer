@@ -360,6 +360,24 @@ func (o *Operator) listenRead() {
 					o.Nickname = id.Login
 					o.server.AddOperator(o)
 					msg := ResponseMessage{Action: actionSendID, Status: "OK", Code: 200}
+					//
+					var rows *sql.Rows
+					var err error
+
+					rows, err = o.server.db.Query("SELECT room FROM room where operator=$1", o.Id)
+
+					if err != nil {
+						panic(err)
+					}
+					for rows.Next() {
+						var room int
+						log.Println()
+						_ = rows.Scan(&room)
+						if apR, ok := o.server.rooms[room]; ok {
+							apR.Operator = o
+							o.rooms[room] = apR
+						}
+					}
 					o.ch <- msg
 				} else {
 					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
