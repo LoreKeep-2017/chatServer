@@ -473,6 +473,40 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 
+				//
+			case actionSendNote:
+				log.Println(actionSendNote)
+				log.Println(o.rooms)
+				var note OperatorNote
+				err := json.Unmarshal(msg.Body, &note)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendNote, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					if _, ok := o.rooms[note.Rid]; !ok {
+						msg := ResponseMessage{Action: actionSendNote, Status: "Room not found", Code: 404}
+						o.ch <- msg
+					} else {
+						r := o.rooms[note.Rid]
+						r.Note = note.Note
+						rows, err := o.server.db.Query(`update room set note=$1 where room=$2`,
+							r.Note,
+							r.Id,
+						)
+						if err != nil {
+							panic(err)
+						} else {
+							log.Println(rows.Columns())
+							js, _ := json.Marshal(note)
+							msg := ResponseMessage{Action: actionSendNote, Status: "OK", Code: 200, Body: js}
+							o.ch <- msg
+							msg.Action = "updateInfo"
+							msg.Body = js
+							o.server.broadcast(msg)
+						}
+					}
+				}
+
 			}
 
 		}

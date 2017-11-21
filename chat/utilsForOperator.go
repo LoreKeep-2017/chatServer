@@ -12,6 +12,7 @@ const (
 	actionSendID           = "sendId"
 	actionChangeOperator   = "changeOperator"
 	actionSearch           = "search"
+	actionSendNote         = "sendNote"
 )
 
 // CheckError checks errors and print log
@@ -64,4 +65,9 @@ type OperatorId struct {
 	Id    int    `json:"id,omitempty"`
 	Login string `json:"login,omitempty"`
 	FIO   string `json:"fio,omitempty"`
+}
+
+type OperatorNote struct {
+	Note string `json:"note"`
+	Rid  int    `json:"rid,omitempty"`
 }
