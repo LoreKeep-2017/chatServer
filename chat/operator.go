@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"strings"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -61,6 +62,36 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, nickname FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
 		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator,  nickname FROM room where status=$1", typeRoom)
+	}
+	if err != nil {
+		panic(err)
+	}
+	result := make(map[int]Room, 0)
+	for rows.Next() {
+		var room int
+		var description string
+		var nickname string
+		var status string
+		var operator int
+		var date int
+		var lastMessgae string
+		log.Println()
+		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
+		log.Println(lastMessgae)
+		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
+		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
+		result[room] = r
+	}
+	return result
+}
+
+func (o *Operator) searchInRoom(typeRoom string, pattern string) map[int]Room {
+	var rows *sql.Rows
+	var err error
+	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, nickname FROM room where status=$1 and operator=$2 and (lower(description) like $3 or lower(nickname) like $3) ", typeRoom, o.Id, pattern)
+	} else {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator,  nickname FROM room where status=$1 and (lower(description) like $2 or lower(nickname) like $2)", typeRoom, pattern)
 	}
 	if err != nil {
 		panic(err)
@@ -317,6 +348,22 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				} else {
 					result := o.searchRoomByStatus(typeRoom.Type)
+					response := OperatorResponseRoomsNew{result, len(result)}
+					rooms, _ := json.Marshal(response)
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}
+					o.ch <- msg
+				}
+
+			//получение комнаты по статусу
+			case actionSearch:
+				log.Println(actionSearch)
+				var typeRoom RequestTypeRooms
+				err := json.Unmarshal(msg.Body, &typeRoom)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					result := o.searchInRoom(typeRoom.Type, strings.ToLower(typeRoom.Pattern))
 					response := OperatorResponseRoomsNew{result, len(result)}
 					rooms, _ := json.Marshal(response)
 					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}

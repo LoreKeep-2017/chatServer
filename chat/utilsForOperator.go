@@ -11,6 +11,7 @@ const (
 	actionGetOperators     = "getOperators"
 	actionSendID           = "sendId"
 	actionChangeOperator   = "changeOperator"
+	actionSearch           = "search"
 )
 
 // CheckError checks errors and print log
@@ -46,7 +47,8 @@ type RequestActionWithRoom struct {
 }
 
 type RequestTypeRooms struct {
-	Type string `json:"type"`
+	Type    string `json:"type"`
+	Pattern string `json:"pattern"`
 }
 
 type OperatorSendMessage struct {

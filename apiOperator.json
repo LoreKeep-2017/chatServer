@@ -240,3 +240,35 @@ response
     "rid": 25
   }
 }
+
+
+//поиск по комнатам
+request
+{
+  "type":"operator",
+  "action" : "search",
+  "body" : {
+    "type": "roomNotActive",
+    "pattern": "%search%"
+  }
+}
+response
+{
+  "action": "getRoomsByStatus",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "rooms": {
+      "1": {
+        "id": 1,
+        "client": {
+          "id": 1,
+          "nick": "nick"
+        },
+        "messages": [],
+        "status": "roomNotActive"
+      }
+    },
+    "size": 1
+  }
+}
