@@ -59,9 +59,9 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 	var rows *sql.Rows
 	var err error
 	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
-		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, nickname FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, note, nickname FROM room where status=$1 and operator=$2", typeRoom, o.Id)
 	} else {
-		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator,  nickname FROM room where status=$1", typeRoom)
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, note, nickname FROM room where status=$1", typeRoom)
 	}
 	if err != nil {
 		panic(err)
@@ -75,10 +75,11 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 		var operator int
 		var date int
 		var lastMessgae string
+		var note string
 		log.Println()
-		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
+		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &note, &nickname)
 		log.Println(lastMessgae)
-		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
+		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}, Note: note}
 		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
 		result[room] = r
 	}
