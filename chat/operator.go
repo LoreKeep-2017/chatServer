@@ -68,20 +68,20 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 	}
 	result := make(map[int]Room, 0)
 	for rows.Next() {
-		var room int
-		var description string
-		var nickname string
-		var status string
-		var operator int
-		var date int
-		var lastMessgae string
-		var note string
+		var room sql.NullInt64
+		var description sql.NullString
+		var nickname sql.NullString
+		var status sql.NullString
+		var operator sql.NullInt64
+		var date sql.NullInt64
+		var lastMessgae sql.NullString
+		var note sql.NullString
 		log.Println()
 		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &note, &nickname)
 		log.Println(lastMessgae)
-		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}, Note: note}
+		r := Room{Id: int(room.Int64), Status: status.String, Time: int(date.Int64), Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: int(operator.Int64)}, Client: &Client{Nick: nickname.String}, Note: note.String}
 		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
-		result[room] = r
+		result[int(room.Int64)] = r
 	}
 	return result
 }
@@ -100,16 +100,16 @@ func (o *Operator) searchInRoom(typeRoom string, pattern string) map[int]Room {
 	result := make(map[int]Room, 0)
 	for rows.Next() {
 		var room int
-		var description string
-		var nickname string
-		var status string
+		var description sql.NullString
+		var nickname sql.NullString
+		var status sql.NullString
 		var operator int
-		var date int
-		var lastMessgae string
+		var date int                   //int
+		var lastMessgae sql.NullString //string
 		log.Println()
 		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
 		log.Println(lastMessgae)
-		r := Room{Id: room, Status: status, Time: date, Description: description, LastMessage: lastMessgae, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname}}
+		r := Room{Id: room, Status: status.String, Time: date, Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname.String}}
 		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
 		result[room] = r
 	}
@@ -267,12 +267,12 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				} else {
 					for rows.Next() {
-						var room int
-						var typeM string
-						var date int
-						var body string
+						var room sql.NullInt64
+						var typeM sql.NullString
+						var date sql.NullInt64
+						var body sql.NullString
 						_ = rows.Scan(&room, &typeM, &date, &body)
-						m := Message{typeM, body, room, date}
+						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
 						messages = append(messages, m)
 					}
 					jsonMessages, _ := json.Marshal(messages)

@@ -201,7 +201,7 @@ func (c *Client) listenRead() {
 				//
 			case actionGetNickname:
 				log.Println(actionGetNickname)
-				var nickname string
+				var nickname sql.NullString
 				log.Println(c.room.Id)
 				_ = c.server.db.QueryRow("SELECT nickname FROM room WHERE room=?", c.room.Id).Scan(&nickname)
 				log.Println(nickname)
@@ -225,12 +225,12 @@ func (c *Client) listenRead() {
 					c.ch <- msg
 				} else {
 					for rows.Next() {
-						var room int
-						var typeM string
-						var date int
-						var body string
+						var room sql.NullInt64
+						var typeM sql.NullString
+						var date sql.NullInt64
+						var body sql.NullString
 						_ = rows.Scan(&room, &typeM, &date, &body)
-						m := Message{typeM, body, room, date}
+						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
 						messages = append(messages, m)
 					}
 					jsonMessages, _ := json.Marshal(messages)
@@ -263,12 +263,12 @@ func (c *Client) listenRead() {
 							c.ch <- msg
 						} else {
 							for rows.Next() {
-								var room int
-								var typeM string
-								var date int
-								var body string
+								var room sql.NullInt64
+								var typeM sql.NullString
+								var date sql.NullInt64
+								var body sql.NullString
 								_ = rows.Scan(&room, &typeM, &date, &body)
-								m := Message{typeM, body, room, date}
+								m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
 								messages = append(messages, m)
 							}
 							jsonMessages, _ := json.Marshal(messages)
@@ -321,12 +321,12 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 			response.Write([]byte(err.Error()))
 		} else {
 			for rows.Next() {
-				var room int
-				var typeM string
-				var date int
-				var body string
+				var room sql.NullInt64
+				var typeM sql.NullString
+				var date sql.NullInt64
+				var body sql.NullString
 				_ = rows.Scan(&room, &typeM, &date, &body)
-				m := Message{typeM, body, room, date}
+				m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
 				messages = append(messages, m)
 			}
 			jsonMessages, _ := json.Marshal(messages)

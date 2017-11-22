@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 )
@@ -89,12 +90,12 @@ func (r *Room) listenWrite() {
 				response = ResponseMessage{Action: actionSendMessage, Status: err.Error(), Code: 404}
 			} else {
 				for rows.Next() {
-					var room int
-					var typeM string
-					var date int
-					var body string
+					var room sql.NullInt64
+					var typeM sql.NullString
+					var date sql.NullInt64
+					var body sql.NullString
 					_ = rows.Scan(&room, &typeM, &date, &body)
-					m := Message{typeM, body, room, date}
+					m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
 					messages = append(messages, m)
 				}
 				jsonMessages, _ := json.Marshal(messages)
