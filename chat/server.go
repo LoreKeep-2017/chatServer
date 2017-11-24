@@ -1,16 +1,21 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	_ "github.com/lib/pq"
+
+	"github.com/LoreKeep-2017/chatServer/db"
 	"golang.org/x/net/websocket"
 )
 
 const (
-	operatorHandlerPattern = "/api/v1/operator"
-	clientHandlerPattern   = "/api/v1/client"
+	operatorHandlerPattern = "/api/v1/operator/"
+	clientHandlerPattern   = "/api/v1/client/"
 )
 
 // Chat server.
@@ -20,6 +25,7 @@ type Server struct {
 	//типы пользователей
 	operators map[int]*Operator
 	rooms     map[int]*Room
+	db        *sql.DB
 	//операции
 	//клиент
 	addCh chan *Client
@@ -41,6 +47,8 @@ func NewServer() *Server {
 	messages := []*Message{}
 	operators := make(map[int]*Operator)
 	rooms := make(map[int]*Room)
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", db.DB_USER, db.DB_PASSWORD, db.DB_NAME)
+	db, err := sql.Open("postgres", dbinfo)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
 	addOCh := make(chan *Operator)
@@ -51,10 +59,15 @@ func NewServer() *Server {
 	doneCh := make(chan bool)
 	errCh := make(chan error)
 
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return &Server{
 		messages,
 		operators,
 		rooms,
+		db,
 		addCh,
 		delCh,
 		addOCh,
@@ -76,6 +89,7 @@ func (s *Server) AddOperator(o *Operator) {
 }
 
 func (s *Server) Del(c *Client) {
+	log.Println("delete", c)
 	s.delCh <- c
 }
 
@@ -104,6 +118,14 @@ func (s *Server) createResponseAllRooms() ResponseMessage {
 	return msg
 }
 
+func (s *Server) sendMessageToOperator(id int, action string, jsonstring []byte) {
+	//response := OperatorResponseRooms{s.rooms, len(s.rooms)}
+	//jsonstring, _ := json.Marshal(response)
+	operator := s.operators[id]
+	msg := ResponseMessage{Action: action, Status: "OK", Code: 200, Body: jsonstring}
+	operator.ch <- msg
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (s *Server) Listen() {
@@ -120,7 +142,7 @@ func (s *Server) Listen() {
 		}()
 
 		room := NewRoom(s)
-		client := NewClient(ws, s, "nick", room)
+		client := NewClient(ws, s, room)
 		room.Client = client
 		s.rooms[room.Id] = room
 		s.Add(client)
@@ -150,21 +172,24 @@ func (s *Server) Listen() {
 
 		// Add new a client
 		case <-s.addCh:
-			msg := s.createResponseAllRooms()
-			s.broadcast(msg)
+			//msg := s.createResponseAllRooms()
+			//s.broadcast(msg)
 
-		// del a client
-		case <-s.delCh:
-			log.Println("Delete client")
-			msg := s.createResponseAllRooms()
-			s.broadcast(msg)
+			// del a client
+		case c := <-s.delCh:
+
+			log.Println("Delete client", c.room)
+			// c.room.Status = roomClose
+			// c.room.channelForStatus <- roomClose
+			// if c.room.Operator != nil {
+			// 	log.Println("rooms", c.room.Operator.rooms)
+			// 	delete(c.room.Operator.rooms, c.room.Id)
+			// }
 
 		// Add new a operator
 		case o := <-s.addOCh:
 			log.Println("Added new operator")
 			s.operators[o.Id] = o
-			msg := s.createResponseAllRooms()
-			o.ch <- msg
 
 		// del a operator
 		case o := <-s.delOCh:

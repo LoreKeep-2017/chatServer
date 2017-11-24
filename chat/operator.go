@@ -1,17 +1,17 @@
 package chat
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"log"
+	"strings"
 	"time"
 
 	"golang.org/x/net/websocket"
 )
 
 const operatorChannelBufSize = 100
-
-var operatorId int = 0
 
 // Chat operator.
 type Operator struct {
@@ -22,6 +22,8 @@ type Operator struct {
 	ch          chan ResponseMessage
 	doneCh      chan bool
 	addToRoomCh chan *Room
+	Nickname    string `json:"nickname,omitempty"`
+	Fio         string `json:"fio,omitempty"`
 }
 
 // Create new chat operator.
@@ -35,13 +37,12 @@ func NewOperator(ws *websocket.Conn, server *Server) *Operator {
 		panic("server cannot be nil")
 	}
 
-	operatorId++
 	rooms := make(map[int]*Room)
 	ch := make(chan ResponseMessage, channelBufSize)
 	doneCh := make(chan bool)
 	addToRoomCh := make(chan *Room, channelBufSize)
 
-	return &Operator{operatorId, ws, server, rooms, ch, doneCh, addToRoomCh}
+	return &Operator{0, ws, server, rooms, ch, doneCh, addToRoomCh, " ", " "}
 }
 
 func (o *Operator) sendChangeStatus(room Room) {
@@ -54,12 +55,63 @@ func (o *Operator) sendChangeStatus(room Room) {
 	websocket.JSON.Send(o.ws, msg)
 }
 
-func (o *Operator) searchRoomByStatus(typeRoom string) map[int]*Room {
-	result := make(map[int]*Room, 0)
-	for k, room := range o.server.rooms {
-		if room.Status == typeRoom {
-			result[k] = room
-		}
+func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
+	var rows *sql.Rows
+	var err error
+	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, note, nickname FROM room where status=$1 and operator=$2", typeRoom, o.Id)
+	} else {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, note, nickname FROM room where status=$1", typeRoom)
+	}
+	if err != nil {
+		panic(err)
+	}
+	result := make(map[int]Room, 0)
+	for rows.Next() {
+		var room sql.NullInt64
+		var description sql.NullString
+		var nickname sql.NullString
+		var status sql.NullString
+		var operator sql.NullInt64
+		var date sql.NullInt64
+		var lastMessgae sql.NullString
+		var note sql.NullString
+		log.Println()
+		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &note, &nickname)
+		log.Println(lastMessgae)
+		r := Room{Id: int(room.Int64), Status: status.String, Time: int(date.Int64), Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: int(operator.Int64)}, Client: &Client{Nick: nickname.String}, Note: note.String}
+		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
+		result[int(room.Int64)] = r
+	}
+	return result
+}
+
+func (o *Operator) searchInRoom(typeRoom string, pattern string) map[int]Room {
+	var rows *sql.Rows
+	var err error
+	if typeRoom == roomBusy || typeRoom == roomSend || typeRoom == roomRecieved {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator, nickname FROM room where status=$1 and operator=$2 and (lower(description) like $3 or lower(nickname) like $3) ", typeRoom, o.Id, pattern)
+	} else {
+		rows, err = o.server.db.Query("SELECT room, description, date, status, lastmessage, operator,  nickname FROM room where status=$1 and (lower(description) like $2 or lower(nickname) like $2)", typeRoom, pattern)
+	}
+	if err != nil {
+		panic(err)
+	}
+	result := make(map[int]Room, 0)
+	for rows.Next() {
+		var room int
+		var description sql.NullString
+		var nickname sql.NullString
+		var status sql.NullString
+		var operator int
+		var date int                   //int
+		var lastMessgae sql.NullString //string
+		log.Println()
+		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
+		log.Println(lastMessgae)
+		r := Room{Id: room, Status: status.String, Time: date, Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname.String}}
+		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
+		result[room] = r
 	}
 	return result
 }
@@ -79,7 +131,9 @@ func (o *Operator) listenWrite() {
 		// send message to the operator
 		case msg := <-o.ch:
 			log.Println(o.ws, msg)
-			websocket.JSON.Send(o.ws, msg)
+			if o.ws != nil {
+				websocket.JSON.Send(o.ws, msg)
+			}
 
 		// receive done request
 		case <-o.doneCh:
@@ -131,15 +185,51 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionEnterRoom, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				room := o.server.rooms[rID.ID]
-				room.Status = roomBusy
-				room.Operator = o
-				o.rooms[room.Id] = room
-				jsonstring, _ := json.Marshal(room)
+				log.Println("if clause")
+				if room, ok := o.server.rooms[rID.ID]; ok {
+					log.Println(ok)
+					room.Status = roomRecieved
+					room.Operator = o
+					o.rooms[room.Id] = room
+					jsonstring, _ := json.Marshal(room)
+					log.Println(room)
+					log.Println(o.server.db)
 
-				msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
-				o.ch <- msg
-				room.channelForStatus <- roomBusy
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
+						room.Id,
+						o.Id,
+					)
+					_, dberr1 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
+						room.Id,
+						o.Id,
+					)
+					response := ResponseMessage{}
+					if dberr != nil {
+						response.Action = actionEnterRoom
+						response.Status = dberr.Error()
+						response.Code = 500
+					} else if dberr1 != nil {
+						response.Action = actionEnterRoom
+						response.Status = dberr1.Error()
+						response.Code = 500
+					} else {
+						response.Action = actionEnterRoom
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = jsonstring
+					}
+					if response.Code == 200 {
+						room.channelForStatus <- roomRecieved
+					}
+					o.ch <- response
+				} else {
+					msg := ResponseMessage{Action: actionEnterRoom, Status: "Room not found", Code: 404}
+					o.ch <- msg
+				}
+
+				//msg := ResponseMessage{Action: actionEnterRoom, Status: "OK", Code: 200, Body: jsonstring}
+				//o.ch <- msg
+				//room.channelForStatus <- roomBusy
 
 			//отправка сообщения
 			case actionSendMessage:
@@ -154,6 +244,7 @@ func (o *Operator) listenRead() {
 				message.Author = "operator"
 				room, ok := o.rooms[message.Room]
 				if ok {
+					log.Println(message)
 					room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
@@ -169,32 +260,48 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				if room, ok := o.rooms[rID.ID]; ok {
-					messages, _ := json.Marshal(room.Messages)
-					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
+				messages := make([]Message, 0)
+				rows, err := o.server.db.Query("SELECT room, type, date, body FROM message where room=$1", rID.ID)
+				if err != nil {
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					o.ch <- msg
 				} else {
-					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
+					for rows.Next() {
+						var room sql.NullInt64
+						var typeM sql.NullString
+						var date sql.NullInt64
+						var body sql.NullString
+						_ = rows.Scan(&room, &typeM, &date, &body)
+						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+						messages = append(messages, m)
+					}
+					jsonMessages, _ := json.Marshal(messages)
+					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 					o.ch <- msg
 				}
 
-			//покидание комнаты
-			case actionLeaveRoom:
-				log.Println(actionLeaveRoom)
+				//
+			case actionRoomStatusSend:
+				log.Println(actionRoomStatusSend)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Invalid Request", Code: 403}
+					msg := ResponseMessage{Action: actionRoomStatusSend, Status: "Invalid Request", Code: 400}
 					o.ch <- msg
 				}
 				if room, ok := o.rooms[rID.ID]; ok {
-					room.Status = roomInProgress
-					delete(o.rooms, room.Id)
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "OK", Code: 200, Body: msg.Body}
-					o.ch <- msg
-					room.channelForStatus <- roomInProgress
+					room.Status = roomSend
+					response := ResponseMessage{}
+
+					response.Action = actionRoomStatusSend
+					response.Status = "OK"
+					response.Code = 200
+					response.Body = msg.Body
+
+					o.ch <- response
+					room.channelForStatus <- roomSend
 				} else {
-					msg := ResponseMessage{Action: actionLeaveRoom, Status: "Room not found", Code: 404, Body: msg.Body}
+					msg := ResponseMessage{Action: actionRoomStatusSend, Status: "Room not found", Code: 404, Body: msg.Body}
 					o.ch <- msg
 				}
 
@@ -210,8 +317,22 @@ func (o *Operator) listenRead() {
 				if room, ok := o.rooms[rID.ID]; ok {
 					room.Status = roomClose
 					delete(o.rooms, room.Id)
-					msg := ResponseMessage{Action: actionCloseRoom, Status: "OK", Code: 200, Body: msg.Body}
-					o.ch <- msg
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
+						room.Id,
+						o.Id,
+					)
+					response := ResponseMessage{}
+					if dberr != nil {
+						response.Action = actionCloseRoom
+						response.Status = dberr.Error()
+						response.Code = 500
+					} else {
+						response.Action = actionCloseRoom
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = msg.Body
+					}
+					o.ch <- response
 					room.channelForStatus <- roomClose
 				} else {
 					msg := ResponseMessage{Action: actionCloseRoom, Status: "Room not found", Code: 404, Body: msg.Body}
@@ -228,10 +349,163 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				} else {
 					result := o.searchRoomByStatus(typeRoom.Type)
-					response := OperatorResponseRooms{result, len(result)}
+					response := OperatorResponseRoomsNew{result, len(result)}
 					rooms, _ := json.Marshal(response)
 					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}
 					o.ch <- msg
+				}
+
+			//получение комнаты по статусу
+			case actionSearch:
+				log.Println(actionSearch)
+				var typeRoom RequestTypeRooms
+				err := json.Unmarshal(msg.Body, &typeRoom)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					result := o.searchInRoom(typeRoom.Type, strings.ToLower(typeRoom.Pattern))
+					response := OperatorResponseRoomsNew{result, len(result)}
+					rooms, _ := json.Marshal(response)
+					msg := ResponseMessage{Action: actionGetRoomsByStatus, Status: "OK", Code: 200, Body: rooms}
+					o.ch <- msg
+				}
+
+			//получение списка операторов
+			case actionGetOperators:
+				log.Println(actionGetOperators)
+				// _, err := o.server.db.Query("SELECT id, nickname, fio FROM operator")
+				// if err != nil {
+				// 	msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
+				// 	o.ch <- msg
+				// } else {
+				result := make([]Operator, 0)
+				for _, v := range o.server.operators {
+					result = append(result, *v)
+				}
+				// for rows.Next() {
+				// 	var nickanme string
+				// 	var fio string
+				// 	var id int
+				// 	_ = rows.Scan(&id, &nickanme, &fio)
+				// 	o := Operator{Id: id, Nickname: nickanme, Fio: fio}
+				// 	result = append(result, o)
+				// }
+				operators, _ := json.Marshal(result)
+				msg := ResponseMessage{Action: actionGetOperators, Status: "OK", Code: 200, Body: operators}
+				o.ch <- msg
+				// }
+
+			case actionSendID:
+				log.Println(actionSendID)
+				var id OperatorId
+				err := json.Unmarshal(msg.Body, &id)
+				if err == nil {
+					o.Id = id.Id
+					o.Fio = id.FIO
+					o.Nickname = id.Login
+					o.server.AddOperator(o)
+					msg := ResponseMessage{Action: actionSendID, Status: "OK", Code: 200}
+					//
+					var rows *sql.Rows
+					var err error
+
+					rows, err = o.server.db.Query("SELECT room FROM room where operator=$1", o.Id)
+
+					if err != nil {
+						panic(err)
+					}
+					for rows.Next() {
+						var room int
+						log.Println()
+						_ = rows.Scan(&room)
+						if apR, ok := o.server.rooms[room]; ok {
+							apR.Operator = o
+							o.rooms[room] = apR
+						}
+					}
+					o.ch <- msg
+				} else {
+					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
+					o.ch <- msg
+				}
+
+			case actionChangeOperator:
+				log.Println(actionChangeOperator)
+				var operatorChange OperatorChange
+				err := json.Unmarshal(msg.Body, &operatorChange)
+				if err == nil {
+					//
+
+					_, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_remove(rooms,$1) WHERE id=$2`,
+						operatorChange.Room,
+						o.Id,
+					)
+					_, dberr1 := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
+						operatorChange.Room,
+						operatorChange.ID,
+					)
+					_, dberr2 := o.server.db.Query(`UPDATE room SET operator=$2 WHERE room=$1`,
+						operatorChange.Room,
+						operatorChange.ID,
+					)
+					response := ResponseMessage{}
+					if (dberr != nil) || (dberr1 != nil) || (dberr2 != nil) {
+						response.Action = actionChangeOperator
+						response.Status = "db error!"
+						response.Code = 500
+					} else {
+						response.Action = actionChangeOperator
+						response.Status = "OK"
+						response.Code = 200
+						response.Body = msg.Body
+					}
+					o.ch <- response
+					room := o.server.rooms[operatorChange.Room]
+					o.server.operators[operatorChange.ID].rooms[room.Id] = room
+					delete(o.rooms, room.Id)
+					room.Operator = o.server.operators[operatorChange.ID]
+					o.rooms[room.Id] = room
+					jsonstring, _ := json.Marshal(room)
+					o.server.sendMessageToOperator(operatorChange.ID, actionEnterRoom, jsonstring)
+					//
+				} else {
+					msg := ResponseMessage{Action: actionSendID, Status: "Invalid request", Code: 400}
+					o.ch <- msg
+				}
+
+				//
+			case actionSendNote:
+				log.Println(actionSendNote)
+				log.Println(o.rooms)
+				var note OperatorNote
+				err := json.Unmarshal(msg.Body, &note)
+				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
+					msg := ResponseMessage{Action: actionSendNote, Status: "Invalid Request", Code: 400}
+					o.ch <- msg
+				} else {
+					if _, ok := o.rooms[note.Rid]; !ok {
+						msg := ResponseMessage{Action: actionSendNote, Status: "Room not found", Code: 404}
+						o.ch <- msg
+					} else {
+						r := o.rooms[note.Rid]
+						r.Note = note.Note
+						rows, err := o.server.db.Query(`update room set note=$1 where room=$2`,
+							r.Note,
+							r.Id,
+						)
+						if err != nil {
+							panic(err)
+						} else {
+							log.Println(rows.Columns())
+							js, _ := json.Marshal(note)
+							msg := ResponseMessage{Action: actionSendNote, Status: "OK", Code: 200, Body: js}
+							o.ch <- msg
+							msg.Action = "updateInfo"
+							msg.Body = js
+							o.server.broadcast(msg)
+						}
+					}
 				}
 
 			}

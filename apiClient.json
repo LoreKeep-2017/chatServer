@@ -157,3 +157,74 @@ response
     "time": 1507364702
   }]
 }
+
+
+//восстановление комнаты
+{
+  "type":"client",
+  "action" : "restoreRoom",
+  "body" :{
+    "rid" : 42
+  }
+}
+//
+{
+  "action": "restoreRoom",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "id": 42,
+    "client": {
+      "id": 2,
+      "nick": ""
+    },
+    "messages": [],
+    "status": "roomBusy",
+    "description": "оп2",
+    "title": "на2",
+    "time": 1510611217
+  }
+}
+
+// отправка первого сообщения клиента
+{
+  "type":"client",
+  "action" : "sendFirstMessage",
+  "body" : {
+    "author" : "client",
+    "body": "сsssss"
+  }
+}
+
+//отправка никнейм
+{
+  "type":"client",
+  "action" : "sendNickname",
+  "body" : {
+    "nickname" : "clientqqqqqqqqqq"
+  }
+}
+response
+{
+  "action": "sendNickname",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "nickname": "clientqqqqqqqqqq"
+  }
+}
+
+//get nickanme
+{
+  "type":"client",
+  "action" : "getNickname"
+}
+response
+{
+  "action": "getNickname",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "nickname": "clientqqqqqqqqqq"
+  }
+}

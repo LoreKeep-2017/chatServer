@@ -98,7 +98,7 @@ response
 request
 {
   "type" : "operator",
-  "action":"leaveRoom",
+  "action":"roomStatusSend",
   "body":  {
     "rid" : 1
   }
@@ -106,7 +106,7 @@ request
 
 response
 {
-  "action": "changeStatusRoom",
+  "action": "roomStatusSend",
   "status": "OK",
   "code": 200,
   "body": {
@@ -160,7 +160,7 @@ response
 }
 
 //получение комнат по статусу
-response
+request
 {
   "type":"operator",
   "action" : "getRoomsByStatus",
@@ -168,7 +168,91 @@ response
     "type": "roomNotActive"
   }
 }
+response
+{
+  "action": "getRoomsByStatus",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "rooms": {
+      "1": {
+        "id": 1,
+        "client": {
+          "id": 1,
+          "nick": "nick"
+        },
+        "messages": [],
+        "status": "roomNotActive"
+      }
+    },
+    "size": 1
+  }
+}
+
+//получение всех операторов
 request
+{
+  "type":"operator",
+  "action" : "getOperators"
+}
+response{
+  "action": "getOperators",
+  "status": "OK",
+  "code": 200,
+  "body": [{
+    "id": 2
+  }, {
+    "id": 17
+  }]
+}
+
+
+//отправка id
+request
+{
+  "id": 1,
+  "action" : "sendId"
+}
+response{
+  "action": "sendId",
+  "status": "OK",
+  "code": 200
+}
+
+
+//перекидывание комнаты
+request
+{
+  "type" : "operator",
+  "action":"changeOperator",
+  "body":  {
+    "to": 26,
+    "rid" : 25
+  }
+}
+response
+{
+  "action": "changeOperator",
+  "status": "OK",
+  "code": 200,
+  "body": {
+    "to": 26,
+    "rid": 25
+  }
+}
+
+
+//поиск по комнатам
+request
+{
+  "type":"operator",
+  "action" : "search",
+  "body" : {
+    "type": "roomNotActive",
+    "pattern": "%search%"
+  }
+}
+response
 {
   "action": "getRoomsByStatus",
   "status": "OK",
