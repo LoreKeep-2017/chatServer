@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -126,6 +127,18 @@ func (c *Client) listenRead() {
 					message.Author = "client"
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
+					if message.Image != nil {
+						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
+						if err != nil {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							c.ch <- msg
+							break
+						} else {
+							_, err = f.Write(message.Image)
+							message.ImageUrl = fileUrl
+						}
+					}
 					c.room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
@@ -147,6 +160,18 @@ func (c *Client) listenRead() {
 					message.Time = int(time.Now().Unix())
 					c.room.Time = int(time.Now().Unix())
 					c.room.LastMessage = message.Body
+					if message.Image != nil {
+						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
+						if err != nil {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							c.ch <- msg
+							break
+						} else {
+							_, err = f.Write(message.Image)
+							message.ImageUrl = fileUrl
+						}
+					}
 					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
 						message.Body,
 						c.room.Time,
@@ -219,7 +244,7 @@ func (c *Client) listenRead() {
 				// response := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
 				// log.Println(response)
 				messages := make([]Message, 0)
-				rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", c.room.Id)
+				rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", c.room.Id)
 				if err != nil {
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					c.ch <- msg
@@ -229,8 +254,9 @@ func (c *Client) listenRead() {
 						var typeM sql.NullString
 						var date sql.NullInt64
 						var body sql.NullString
-						_ = rows.Scan(&room, &typeM, &date, &body)
-						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+						var url sql.NullString
+						_ = rows.Scan(&room, &typeM, &date, &body, &url)
+						m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 						messages = append(messages, m)
 					}
 					jsonMessages, _ := json.Marshal(messages)
@@ -257,7 +283,7 @@ func (c *Client) listenRead() {
 						c.room.channelForStatus <- roomBusy
 
 						messages := make([]Message, 0)
-						rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)
+						rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", r.Id)
 						if err != nil {
 							msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 							c.ch <- msg
@@ -267,8 +293,9 @@ func (c *Client) listenRead() {
 								var typeM sql.NullString
 								var date sql.NullInt64
 								var body sql.NullString
-								_ = rows.Scan(&room, &typeM, &date, &body)
-								m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+								var url sql.NullString
+								_ = rows.Scan(&room, &typeM, &date, &body, &url)
+								m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 								messages = append(messages, m)
 							}
 							jsonMessages, _ := json.Marshal(messages)
@@ -315,7 +342,7 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 			response.WriteHeader(http.StatusOK)
 			return
 		}
-		rows, err := db.Query("SELECT room, type, date, body FROM message where room=$1 order by date desc limit $2", id, diff)
+		rows, err := db.Query("SELECT room, type, date, body, url FROM message where room=$1 order by date desc limit $2", id, diff)
 		if err != nil {
 			response.WriteHeader(http.StatusInternalServerError)
 			response.Write([]byte(err.Error()))
@@ -325,8 +352,9 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 				var typeM sql.NullString
 				var date sql.NullInt64
 				var body sql.NullString
-				_ = rows.Scan(&room, &typeM, &date, &body)
-				m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+				var url sql.NullString
+				_ = rows.Scan(&room, &typeM, &date, &body, &url)
+				m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 				messages = append(messages, m)
 			}
 			jsonMessages, _ := json.Marshal(messages)

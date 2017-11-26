@@ -3,8 +3,11 @@ package chat
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -245,6 +248,18 @@ func (o *Operator) listenRead() {
 				room, ok := o.rooms[message.Room]
 				if ok {
 					log.Println(message)
+					if message.Image != nil {
+						fileUrl := fileDir + "/" + strconv.Itoa(room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
+						if err != nil {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							o.ch <- msg
+							break
+						} else {
+							_, err = f.Write(message.Image)
+							message.ImageUrl = fileUrl
+						}
+					}
 					room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
@@ -261,7 +276,7 @@ func (o *Operator) listenRead() {
 					o.ch <- msg
 				}
 				messages := make([]Message, 0)
-				rows, err := o.server.db.Query("SELECT room, type, date, body FROM message where room=$1", rID.ID)
+				rows, err := o.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", rID.ID)
 				if err != nil {
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					o.ch <- msg
@@ -271,8 +286,9 @@ func (o *Operator) listenRead() {
 						var typeM sql.NullString
 						var date sql.NullInt64
 						var body sql.NullString
-						_ = rows.Scan(&room, &typeM, &date, &body)
-						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+						var url sql.NullString
+						_ = rows.Scan(&room, &typeM, &date, &body, &url)
+						m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 						messages = append(messages, m)
 					}
 					jsonMessages, _ := json.Marshal(messages)

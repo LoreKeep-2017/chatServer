@@ -13,10 +13,12 @@ const (
 )
 
 type Message struct {
-	Author string `json:"author,omitempty"`
-	Body   string `json:"body"`
-	Room   int    `json:"room,omitempty"`
-	Time   int    `json:"time,omitempty"`
+	Author   string `json:"author,omitempty"`
+	Body     string `json:"body,omitempty"`
+	Room     int    `json:"room,omitempty"`
+	Time     int    `json:"time,omitempty"`
+	ImageUrl string `json:"imageUrl,omitempty"`
+	Image    []byte `json:"image,omitempty"`
 }
 
 //RequestMessage стандартное сообщение с фронтенда
