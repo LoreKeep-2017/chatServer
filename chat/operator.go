@@ -484,11 +484,11 @@ func (o *Operator) listenRead() {
 					msg := ResponseMessage{Action: actionSendNote, Status: "Invalid Request", Code: 400}
 					o.ch <- msg
 				} else {
-					if _, ok := o.rooms[note.Rid]; !ok {
+					if _, ok := o.server.rooms[note.Rid]; !ok {
 						msg := ResponseMessage{Action: actionSendNote, Status: "Room not found", Code: 404}
 						o.ch <- msg
 					} else {
-						r := o.rooms[note.Rid]
+						r := o.server.rooms[note.Rid]
 						r.Note = note.Note
 						rows, err := o.server.db.Query(`update room set note=$1 where room=$2`,
 							r.Note,
