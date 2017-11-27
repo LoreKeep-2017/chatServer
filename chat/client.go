@@ -128,7 +128,18 @@ func (c *Client) listenRead() {
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
 					if message.Image != nil {
-						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						if message.ImageFormat == "" {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						if _, ok := FormatsImage[message.ImageFormat]; !ok {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
+						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fileDBurl
 						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
@@ -136,7 +147,7 @@ func (c *Client) listenRead() {
 							break
 						} else {
 							_, err = f.Write(message.Image)
-							message.ImageUrl = fileUrl
+							message.ImageUrl = fileDBurl
 						}
 					}
 					c.room.channelForMessage <- message
@@ -161,7 +172,18 @@ func (c *Client) listenRead() {
 					c.room.Time = int(time.Now().Unix())
 					c.room.LastMessage = message.Body
 					if message.Image != nil {
-						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						if message.ImageFormat == "" {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						if _, ok := FormatsImage[message.ImageFormat]; !ok {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
+						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fileDBurl
 						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
@@ -169,7 +191,7 @@ func (c *Client) listenRead() {
 							break
 						} else {
 							_, err = f.Write(message.Image)
-							message.ImageUrl = fileUrl
+							message.ImageUrl = fileDBurl
 						}
 					}
 					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,

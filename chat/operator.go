@@ -249,7 +249,18 @@ func (o *Operator) listenRead() {
 				if ok {
 					log.Println(message)
 					if message.Image != nil {
-						fileUrl := fileDir + "/" + strconv.Itoa(room.Id) + "/" + fmt.Sprintf("%d.png", time.Now().UnixNano())
+						if message.ImageFormat == "" {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							o.ch <- msg
+							break
+						}
+						if _, ok := FormatsImage[message.ImageFormat]; !ok {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							o.ch <- msg
+							break
+						}
+						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
+						fileUrl := fileDir + "/" + strconv.Itoa(room.Id) + "/" + fileDBurl
 						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
@@ -257,7 +268,7 @@ func (o *Operator) listenRead() {
 							break
 						} else {
 							_, err = f.Write(message.Image)
-							message.ImageUrl = fileUrl
+							message.ImageUrl = fileDBurl
 						}
 					}
 					room.channelForMessage <- message
