@@ -2,19 +2,25 @@ package chat
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"log"
 	"os"
+	"strings"
 )
 
 func convertString(str string, format string, dest *os.File) error {
 
-	//b64str := str[strings.IndexByte(str, ',')+1:]
-	//bytesData := bytes.NewReader([]byte(b64str))
-	bytesData := bytes.NewReader([]byte(str))
+	b64data := str[strings.IndexByte(str, ',')+1:]
+	bytesArray, err := base64.StdEncoding.DecodeString(b64data)
+	if err != nil {
+		return err
+	}
+	bytesData := bytes.NewReader(bytesArray)
+	//bytesData := bytes.NewReader([]byte(str))
 	log.Println(format)
 	switch format {
 	case "png":
