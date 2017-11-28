@@ -139,8 +139,11 @@ func (c *Client) listenRead() {
 							break
 						}
 						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
-						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fileDBurl
-						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
+						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
+						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0666)
+						}
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
 							c.ch <- msg
@@ -195,22 +198,25 @@ func (c *Client) listenRead() {
 							break
 						}
 						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
-						fileUrl := fileDir + "/" + strconv.Itoa(c.room.Id) + "/" + fileDBurl
-						f, err := os.OpenFile(fileUrl, os.O_WRONLY|os.O_CREATE, 0666)
+						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
+						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0666)
+						}
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 						if err != nil {
-							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 							c.ch <- msg
 							break
 						} else {
 							err := convertString(message.Image, message.ImageFormat, f)
 							if err != nil {
-								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 								c.ch <- msg
 								break
 							}
 							err = f.Close()
 							if err != nil {
-								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 								c.ch <- msg
 								break
 							}
