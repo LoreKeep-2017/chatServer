@@ -102,7 +102,12 @@ func (r *Room) listenWrite() {
 					m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 					messages = append(messages, m)
 				}
-				jsonMessages, _ := json.Marshal(messages)
+				// try new struct
+				tmp := make([]Message, len(messages))
+				copy(tmp, messages)
+				r.Messages = tmp
+				// try new struct
+				jsonMessages, _ := json.Marshal(r)
 				response = ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: jsonMessages}
 			}
 			if msg.Author == "client" && r.Operator != nil {
