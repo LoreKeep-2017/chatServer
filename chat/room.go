@@ -17,7 +17,7 @@ const (
 	roomSend       = "roomSend"
 	roomRecieved   = "roomRecieved"
 	//file dir
-	fileDir = "/home/ilia/fileChat/"
+	fileDir = "/home/tp/fileChat/"
 )
 
 // Chat operator.
