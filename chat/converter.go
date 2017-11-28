@@ -12,6 +12,7 @@ import (
 
 func convertString(str string, format string, dest *os.File) error {
 	bytesData := bytes.NewReader([]byte(str))
+	log.Println(format)
 	switch format {
 	case "png":
 		log.Println("png")
