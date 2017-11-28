@@ -8,13 +8,13 @@ import (
 	"image/png"
 	"log"
 	"os"
-	"strings"
 )
 
 func convertString(str string, format string, dest *os.File) error {
 
-	b64str := str[strings.IndexByte(str, ',')+1:]
-	bytesData := bytes.NewReader([]byte(b64str))
+	//b64str := str[strings.IndexByte(str, ',')+1:]
+	//bytesData := bytes.NewReader([]byte(b64str))
+	bytesData := bytes.NewReader([]byte(str))
 	log.Println(format)
 	switch format {
 	case "png":
