@@ -248,7 +248,7 @@ func (o *Operator) listenRead() {
 				room, ok := o.rooms[message.Room]
 				if ok {
 					log.Println(message)
-					if message.Image != nil {
+					if message.Image != "" {
 						if message.ImageFormat == "" {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
 							o.ch <- msg
@@ -267,7 +267,19 @@ func (o *Operator) listenRead() {
 							o.ch <- msg
 							break
 						} else {
-							_, err = f.Write(message.Image)
+							err := convertString(message.Image, message.ImageFormat, f)
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								o.ch <- msg
+								break
+							}
+							err = f.Close()
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								o.ch <- msg
+								break
+							}
+							//_, err = f.Write(message.Image)
 							message.ImageUrl = fileDBurl
 						}
 					}

@@ -18,7 +18,7 @@ type Message struct {
 	Room        int    `json:"room,omitempty"`
 	Time        int    `json:"time,omitempty"`
 	ImageUrl    string `json:"imageUrl,omitempty"`
-	Image       []byte `json:"image,omitempty"`
+	Image       string `json:"image,omitempty"`
 	ImageFormat string `json:"imageFormat,omitempty"`
 }
 

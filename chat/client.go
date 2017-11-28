@@ -127,7 +127,7 @@ func (c *Client) listenRead() {
 					message.Author = "client"
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
-					if message.Image != nil {
+					if message.Image != "" {
 						if message.ImageFormat == "" {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
 							c.ch <- msg
@@ -146,7 +146,19 @@ func (c *Client) listenRead() {
 							c.ch <- msg
 							break
 						} else {
-							_, err = f.Write(message.Image)
+							err := convertString(message.Image, message.ImageFormat, f)
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							err = f.Close()
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							//_, err = f.Write([]byte(img))
 							message.ImageUrl = fileDBurl
 						}
 					}
@@ -171,7 +183,7 @@ func (c *Client) listenRead() {
 					message.Time = int(time.Now().Unix())
 					c.room.Time = int(time.Now().Unix())
 					c.room.LastMessage = message.Body
-					if message.Image != nil {
+					if message.Image != "" {
 						if message.ImageFormat == "" {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
 							c.ch <- msg
@@ -190,7 +202,19 @@ func (c *Client) listenRead() {
 							c.ch <- msg
 							break
 						} else {
-							_, err = f.Write(message.Image)
+							err := convertString(message.Image, message.ImageFormat, f)
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							err = f.Close()
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							//_, err = f.Write(message.Image)
 							message.ImageUrl = fileDBurl
 						}
 					}
