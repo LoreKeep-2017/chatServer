@@ -41,7 +41,7 @@ func convertString(str string, format string, dest *os.File) error {
 		// 	return err
 		// }
 		// return nil
-		return png.Encode(e, im)
+		return png.Encode(dest, im)
 	case "jpeg":
 		log.Println("jpeg")
 		var opt jpeg.Options
