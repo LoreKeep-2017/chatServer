@@ -262,9 +262,11 @@ func (o *Operator) listenRead() {
 						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
 						fileUrl := fileDir + strconv.Itoa(room.Id) + "/" + fileDBurl
 						if _, err := os.Stat(fileDir + strconv.Itoa(room.Id)); os.IsNotExist(err) {
-							os.Mkdir(fileDir+strconv.Itoa(room.Id), 0666)
+							os.Mkdir(fileDir+strconv.Itoa(room.Id), 7777)
+							os.Chmod(fileDir+strconv.Itoa(room.Id), os.FileMode{7777})
 						}
-						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 7777)
+						os.Chmod(fileUrl, os.FileMode{7777})
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 							o.ch <- msg

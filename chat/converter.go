@@ -24,12 +24,24 @@ func convertString(str string, format string, dest *os.File) error {
 	log.Println(format)
 	switch format {
 	case "png":
-		log.Println("png")
-		im, err := png.Decode(bytesData)
+		// log.Println("png")
+		// im, err := png.Decode(bytesData)
+		// if err != nil {
+		// 	return err
+		// }
+		e := base64.NewEncoder(base64.StdEncoding, dest)
+		_, err := e.Write(bytesData)
 		if err != nil {
+			log.Println(err.Error())
 			return err
 		}
-		return png.Encode(dest, im)
+		err := e.Close()
+		if err != nil {
+			log.Println(err.Error())
+			return err
+		}
+		return nil
+		return png.Encode(e, im)
 	case "jpeg":
 		log.Println("jpeg")
 		var opt jpeg.Options
