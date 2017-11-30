@@ -145,11 +145,11 @@ func (c *Client) listenRead() {
 						osUid, err := strconv.Atoi(osUser.Uid)
 						grUid, err := strconv.Atoi(osUser.Gid)
 						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
-							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0666)
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
 							os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
 							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
 						}
-						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 						os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
@@ -211,11 +211,11 @@ func (c *Client) listenRead() {
 						osUid, err := strconv.Atoi(osUser.Uid)
 						grUid, err := strconv.Atoi(osUser.Gid)
 						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
-							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 06666)
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
 							os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
 							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
 						}
-						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 						os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
