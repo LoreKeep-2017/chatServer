@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/user"
 	"strconv"
 	"time"
 
@@ -141,16 +140,16 @@ func (c *Client) listenRead() {
 						}
 						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
 						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
-						osUser, err := user.Lookup("tp")
-						osUid, err := strconv.Atoi(osUser.Uid)
-						grUid, err := strconv.Atoi(osUser.Gid)
+						// osUser, err := user.Lookup("tp")
+						// osUid, err := strconv.Atoi(osUser.Uid)
+						// grUid, err := strconv.Atoi(osUser.Gid)
 						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
 							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
-							os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
+							//os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
 							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
 						}
 						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-						os.Chown(fileUrl, osUid, grUid)
+						//os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
@@ -207,16 +206,16 @@ func (c *Client) listenRead() {
 						}
 						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
 						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
-						osUser, err := user.Lookup("tp")
-						osUid, err := strconv.Atoi(osUser.Uid)
-						grUid, err := strconv.Atoi(osUser.Gid)
+						// osUser, err := user.Lookup("tp")
+						// osUid, err := strconv.Atoi(osUser.Uid)
+						// grUid, err := strconv.Atoi(osUser.Gid)
 						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
 							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
-							os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
+							//os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
 							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
 						}
 						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-						os.Chown(fileUrl, osUid, grUid)
+						//os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
