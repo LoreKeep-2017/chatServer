@@ -110,7 +110,7 @@ func (c *Client) listenRead() {
 			err := websocket.ReadJSON(c.ws, &msg)
 			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
-				c.doneCh <- true
+				//c.doneCh <- true
 			} else if err != nil {
 				c.doneCh <- true
 				//c.server.Err(err)
