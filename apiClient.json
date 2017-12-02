@@ -50,7 +50,8 @@ request
   "action" : "sendMessage",
   "body" : {
     "author" : "client",
-    "body": "сообщение"
+    "body": "сообщение",
+    "image": []byte
   }
 }
 
@@ -64,7 +65,8 @@ response
     "author": "operator",
     "body": "hello",
     "room": 1,
-    "time": 1507239556
+    "time": 1507239556,
+    "urlImage" : "/some/url/on/server"
   }, {
     "author": "operator",
     "body": "hello",

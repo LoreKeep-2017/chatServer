@@ -16,6 +16,8 @@ const (
 	roomClose      = "roomClose"
 	roomSend       = "roomSend"
 	roomRecieved   = "roomRecieved"
+	//file dir
+	fileDir = "/home/tp/fileChat/"
 )
 
 // Chat operator.
@@ -72,21 +74,25 @@ func (r *Room) listenWrite() {
 		case msg := <-r.channelForMessage:
 			log.Println("channelForMessage")
 			//r.Messages = append(r.Messages, msg)
-			_, err := r.server.db.Query(`insert into message(room, type, date, body) values($1, $2, $3, $4)`,
+			first, err := r.server.db.Query(`insert into message(room, type, date, body, url) values($1, $2, $3, $4, $5)`,
 				r.Id,
 				msg.Author,
 				msg.Time,
 				msg.Body,
+				msg.ImageUrl,
 			)
-			_, err = r.server.db.Query(`update room set lastmessage=$1 where room=$2`,
+			first.Close()
+			second, err := r.server.db.Query(`update room set lastmessage=$1 where room=$2`,
 				msg.Body,
 				r.Id,
 			)
+			second.Close()
 			r.LastMessage = msg.Body
 			var response ResponseMessage
 			messages := make([]Message, 0)
-			rows, err := r.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)
+			rows, err := r.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", r.Id)
 			if err != nil {
+				rows.Close()
 				response = ResponseMessage{Action: actionSendMessage, Status: err.Error(), Code: 404}
 			} else {
 				for rows.Next() {
@@ -94,11 +100,18 @@ func (r *Room) listenWrite() {
 					var typeM sql.NullString
 					var date sql.NullInt64
 					var body sql.NullString
-					_ = rows.Scan(&room, &typeM, &date, &body)
-					m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+					var url sql.NullString
+					_ = rows.Scan(&room, &typeM, &date, &body, &url)
+					m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 					messages = append(messages, m)
 				}
-				jsonMessages, _ := json.Marshal(messages)
+				rows.Close()
+				// try new struct
+				tmp := make([]Message, len(messages))
+				copy(tmp, messages)
+				r.Messages = tmp
+				// try new struct
+				jsonMessages, _ := json.Marshal(r)
 				response = ResponseMessage{Action: actionSendMessage, Status: "OK", Code: 200, Body: jsonMessages}
 			}
 			if msg.Author == "client" && r.Operator != nil {
@@ -117,9 +130,10 @@ func (r *Room) listenWrite() {
 			r.Status = msg
 			jsonstring, _ := json.Marshal(r)
 			response := ResponseMessage{}
-			_, err := r.server.db.Query(`update room set status=$1 where room=$2`,
+			rows, err := r.server.db.Query(`update room set status=$1 where room=$2`,
 				r.Status,
 				r.Id)
+			rows.Close()
 			if err != nil {
 				response.Action = actionChangeStatusRooms
 				response.Status = err.Error()

@@ -7,12 +7,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/LoreKeep-2017/chatServer/db"
+	"github.com/gorilla/websocket"
 
-	"golang.org/x/net/websocket"
+	"github.com/LoreKeep-2017/chatServer/db"
+	//"golang.org/x/net/websocket"
 )
 
 const channelBufSize = 100
@@ -75,7 +77,8 @@ func (c *Client) listenWrite() {
 		case msg := <-c.ch:
 			log.Println("Send:", msg, c.ws)
 			if c.ws != nil {
-				websocket.JSON.Send(c.ws, msg)
+				websocket.WriteJSON(c.ws, msg)
+				//websocket.JSON.Send(c.ws, msg)
 			}
 
 		// receive done request
@@ -104,11 +107,15 @@ func (c *Client) listenRead() {
 		// read data from websocket connection
 		default:
 			var msg RequestMessage
-			err := websocket.JSON.Receive(c.ws, &msg)
+			err := websocket.ReadJSON(c.ws, &msg)
+			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
+				log.Println(err.Error())
 				c.doneCh <- true
 			} else if err != nil {
-				c.server.Err(err)
+				log.Println(err.Error())
+				c.doneCh <- true
+				//c.server.Err(err)
 			}
 			log.Println(msg)
 			switch msg.Action {
@@ -126,6 +133,51 @@ func (c *Client) listenRead() {
 					message.Author = "client"
 					message.Room = c.room.Id
 					message.Time = int(time.Now().Unix())
+					if message.Image != "" {
+						if message.ImageFormat == "" {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						if _, ok := FormatsImage[message.ImageFormat]; !ok {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
+						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
+						// osUser, err := user.Lookup("tp")
+						// osUid, err := strconv.Atoi(osUser.Uid)
+						// grUid, err := strconv.Atoi(osUser.Gid)
+						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
+							//os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
+							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
+						}
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+						//os.Chown(fileUrl, osUid, grUid)
+						//os.Chmod(fileUrl, 7777)
+						if err != nil {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							c.ch <- msg
+							break
+						} else {
+							err := convertString(message.Image, message.ImageFormat, f)
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							err = f.Close()
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+								c.ch <- msg
+								break
+							}
+							//_, err = f.Write([]byte(img))
+							message.ImageUrl = fileDBurl
+						}
+					}
 					c.room.channelForMessage <- message
 				} else {
 					msg := ResponseMessage{Action: actionSendMessage, Status: "Room not found", Code: 404}
@@ -147,11 +199,57 @@ func (c *Client) listenRead() {
 					message.Time = int(time.Now().Unix())
 					c.room.Time = int(time.Now().Unix())
 					c.room.LastMessage = message.Body
-					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
+					if message.Image != "" {
+						if message.ImageFormat == "" {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						if _, ok := FormatsImage[message.ImageFormat]; !ok {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
+							c.ch <- msg
+							break
+						}
+						fileDBurl := fmt.Sprintf("%d.%s", time.Now().UnixNano(), message.ImageFormat)
+						fileUrl := fileDir + strconv.Itoa(c.room.Id) + "/" + fileDBurl
+						// osUser, err := user.Lookup("tp")
+						// osUid, err := strconv.Atoi(osUser.Uid)
+						// grUid, err := strconv.Atoi(osUser.Gid)
+						if _, err := os.Stat(fileDir + strconv.Itoa(c.room.Id)); os.IsNotExist(err) {
+							os.Mkdir(fileDir+strconv.Itoa(c.room.Id), 0777)
+							//os.Chown(fileDir+strconv.Itoa(c.room.Id), osUid, grUid)
+							//os.Chmod(fileDir+strconv.Itoa(c.room.Id), 7777)
+						}
+						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+						//os.Chown(fileUrl, osUid, grUid)
+						//os.Chmod(fileUrl, 7777)
+						if err != nil {
+							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
+							c.ch <- msg
+							break
+						} else {
+							err := convertString(message.Image, message.ImageFormat, f)
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
+								c.ch <- msg
+								break
+							}
+							err = f.Close()
+							if err != nil {
+								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
+								c.ch <- msg
+								break
+							}
+							//_, err = f.Write(message.Image)
+							message.ImageUrl = fileDBurl
+						}
+					}
+					rows, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
 						message.Body,
 						c.room.Time,
 						c.room.Id,
 					)
+					rows.Close()
 					if err != nil {
 						msg := ResponseMessage{Action: actionSendFirstMessage, Status: "db error", Code: 502}
 						c.ch <- msg
@@ -183,10 +281,10 @@ func (c *Client) listenRead() {
 						nickname.Nickname,
 						c.room.Id,
 					)
+					rows.Close()
 					if err != nil {
 						panic(err)
 					} else {
-						log.Println(rows.Columns())
 						js, _ := json.Marshal(nickname)
 						msg := ResponseMessage{Action: actionSendNickname, Status: "OK", Code: 200, Body: js}
 						c.ch <- msg
@@ -219,8 +317,9 @@ func (c *Client) listenRead() {
 				// response := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: messages}
 				// log.Println(response)
 				messages := make([]Message, 0)
-				rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", c.room.Id)
+				rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", c.room.Id)
 				if err != nil {
+					rows.Close()
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					c.ch <- msg
 				} else {
@@ -229,10 +328,12 @@ func (c *Client) listenRead() {
 						var typeM sql.NullString
 						var date sql.NullInt64
 						var body sql.NullString
-						_ = rows.Scan(&room, &typeM, &date, &body)
-						m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+						var url sql.NullString
+						_ = rows.Scan(&room, &typeM, &date, &body, &url)
+						m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 						messages = append(messages, m)
 					}
+					rows.Close()
 					jsonMessages, _ := json.Marshal(messages)
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 					c.ch <- msg
@@ -257,8 +358,9 @@ func (c *Client) listenRead() {
 						c.room.channelForStatus <- roomBusy
 
 						messages := make([]Message, 0)
-						rows, err := c.server.db.Query("SELECT room, type, date, body FROM message where room=$1", r.Id)
+						rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", r.Id)
 						if err != nil {
+							rows.Close()
 							msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 							c.ch <- msg
 						} else {
@@ -267,10 +369,12 @@ func (c *Client) listenRead() {
 								var typeM sql.NullString
 								var date sql.NullInt64
 								var body sql.NullString
-								_ = rows.Scan(&room, &typeM, &date, &body)
-								m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+								var url sql.NullString
+								_ = rows.Scan(&room, &typeM, &date, &body, &url)
+								m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 								messages = append(messages, m)
 							}
+							rows.Close()
 							jsonMessages, _ := json.Marshal(messages)
 							msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 							c.ch <- msg
@@ -315,8 +419,9 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 			response.WriteHeader(http.StatusOK)
 			return
 		}
-		rows, err := db.Query("SELECT room, type, date, body FROM message where room=$1 order by date desc limit $2", id, diff)
+		rows, err := db.Query("SELECT room, type, date, body, url FROM message where room=$1 order by date desc limit $2", id, diff)
 		if err != nil {
+			rows.Close()
 			response.WriteHeader(http.StatusInternalServerError)
 			response.Write([]byte(err.Error()))
 		} else {
@@ -325,10 +430,12 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 				var typeM sql.NullString
 				var date sql.NullInt64
 				var body sql.NullString
-				_ = rows.Scan(&room, &typeM, &date, &body)
-				m := Message{typeM.String, body.String, int(room.Int64), int(date.Int64)}
+				var url sql.NullString
+				_ = rows.Scan(&room, &typeM, &date, &body, &url)
+				m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 				messages = append(messages, m)
 			}
+			rows.Close()
 			jsonMessages, _ := json.Marshal(messages)
 			msg := ResponseMessage{Action: "getDiff", Status: "OK", Code: 200, Body: jsonMessages}
 			js, _ := json.Marshal(msg)

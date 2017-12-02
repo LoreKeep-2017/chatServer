@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 
 	"github.com/LoreKeep-2017/chatServer/db"
-	"golang.org/x/net/websocket"
+	//"golang.org/x/net/websocket"
 )
 
 const (
@@ -20,6 +22,7 @@ const (
 
 // Chat server.
 type Server struct {
+	Router *mux.Router
 	//сообщения
 	messages []*Message
 	//типы пользователей
@@ -44,6 +47,7 @@ type Server struct {
 
 // Create new chat server.
 func NewServer() *Server {
+	r := mux.NewRouter()
 	messages := []*Message{}
 	operators := make(map[int]*Operator)
 	rooms := make(map[int]*Room)
@@ -64,6 +68,7 @@ func NewServer() *Server {
 	}
 
 	return &Server{
+		r,
 		messages,
 		operators,
 		rooms,
@@ -126,6 +131,14 @@ func (s *Server) sendMessageToOperator(id int, action string, jsonstring []byte)
 	operator.ch <- msg
 }
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (s *Server) Listen() {
@@ -133,16 +146,22 @@ func (s *Server) Listen() {
 	log.Println("Listening server...")
 
 	// websocket handler for client
-	onConnected := func(ws *websocket.Conn) {
+	onConnected := func(w http.ResponseWriter, r *http.Request) {
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			//return
+		}
 		defer func() {
-			err := ws.Close()
+			err := conn.Close()
 			if err != nil {
 				s.errCh <- err
 			}
 		}()
 
 		room := NewRoom(s)
-		client := NewClient(ws, s, room)
+		client := NewClient(conn, s, room)
 		room.Client = client
 		s.rooms[room.Id] = room
 		s.Add(client)
@@ -151,20 +170,29 @@ func (s *Server) Listen() {
 	}
 
 	// websocket handler for operator
-	onConnectedOperator := func(ws *websocket.Conn) {
+	onConnectedOperator := func(w http.ResponseWriter, r *http.Request) {
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			// return
+		}
 		defer func() {
-			err := ws.Close()
+			err := conn.Close()
 			if err != nil {
 				s.errCh <- err
 			}
 		}()
-
-		operator := NewOperator(ws, s)
+		operator := NewOperator(conn, s)
 		s.AddOperator(operator)
 		operator.Listen()
 	}
-	http.Handle(clientHandlerPattern, websocket.Handler(onConnected))
-	http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
+	// websocket.
+	// 	http.HandleF
+	s.Router.HandleFunc(clientHandlerPattern, onConnected)
+	s.Router.HandleFunc(operatorHandlerPattern, onConnectedOperator)
+	//http.Handle(clientHandlerPattern, onConnected)
+	//http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
 	log.Println("Created handlers")
 
 	for {

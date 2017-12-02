@@ -13,10 +13,13 @@ const (
 )
 
 type Message struct {
-	Author string `json:"author,omitempty"`
-	Body   string `json:"body"`
-	Room   int    `json:"room,omitempty"`
-	Time   int    `json:"time,omitempty"`
+	Author      string `json:"author,omitempty"`
+	Body        string `json:"body,omitempty"`
+	Room        int    `json:"room,omitempty"`
+	Time        int    `json:"time,omitempty"`
+	ImageUrl    string `json:"imageUrl,omitempty"`
+	Image       string `json:"image,omitempty"`
+	ImageFormat string `json:"imageFormat,omitempty"`
 }
 
 //RequestMessage стандартное сообщение с фронтенда
@@ -37,4 +40,12 @@ type ResponseMessage struct {
 
 func (self *Message) String() string {
 	return strconv.Itoa(self.Room) + ") " + self.Author + ": " + self.Body
+}
+
+var FormatsImage = map[string]bool{
+	"svg":  true,
+	"png":  true,
+	"jpg":  true,
+	"jpeg": true,
+	"gif":  true,
 }
