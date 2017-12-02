@@ -20,7 +20,6 @@ func convertString(str string, format string, dest *os.File) error {
 		return err
 	}
 	bytesData := bytes.NewReader(bytesArray)
-	//bytesData := bytes.NewReader([]byte(str))
 	log.Println(format)
 	switch format {
 	case "png":
@@ -29,18 +28,6 @@ func convertString(str string, format string, dest *os.File) error {
 		if err != nil {
 			return err
 		}
-		// e := base64.NewEncoder(base64.StdEncoding, dest)
-		// _, err := e.Write(bytesData)
-		// if err != nil {
-		// 	log.Println(err.Error())
-		// 	return err
-		// }
-		// err := e.Close()
-		// if err != nil {
-		// 	log.Println(err.Error())
-		// 	return err
-		// }
-		// return nil
 		return png.Encode(dest, im)
 	case "jpeg":
 		log.Println("jpeg")
@@ -61,13 +48,4 @@ func convertString(str string, format string, dest *os.File) error {
 		return gif.Encode(dest, im, &opt)
 	}
 	return errors.New("format only jpeg/gif/png")
-
-	// switch strings.TrimSuffix(str[5:coI], ";base64") {
-	// case "image/png":
-	// 	pngI, err := png.Decode(res)
-	// 	// ...
-	// case "image/jpeg":
-	// 	jpgI, err := jpeg.Decode(res)
-	// 	// ...
-	// }
 }

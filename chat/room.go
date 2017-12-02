@@ -92,6 +92,7 @@ func (r *Room) listenWrite() {
 			messages := make([]Message, 0)
 			rows, err := r.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", r.Id)
 			if err != nil {
+				rows.Close()
 				response = ResponseMessage{Action: actionSendMessage, Status: err.Error(), Code: 404}
 			} else {
 				for rows.Next() {
@@ -129,9 +130,10 @@ func (r *Room) listenWrite() {
 			r.Status = msg
 			jsonstring, _ := json.Marshal(r)
 			response := ResponseMessage{}
-			_, err := r.server.db.Query(`update room set status=$1 where room=$2`,
+			rows, err := r.server.db.Query(`update room set status=$1 where room=$2`,
 				r.Status,
 				r.Id)
+			rows.Close()
 			if err != nil {
 				response.Action = actionChangeStatusRooms
 				response.Status = err.Error()

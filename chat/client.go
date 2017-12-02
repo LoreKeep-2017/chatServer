@@ -244,11 +244,12 @@ func (c *Client) listenRead() {
 							message.ImageUrl = fileDBurl
 						}
 					}
-					_, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
+					rows, err := c.server.db.Query(`update room set description=$1, date=$2 where room=$3`,
 						message.Body,
 						c.room.Time,
 						c.room.Id,
 					)
+					rows.Close()
 					if err != nil {
 						msg := ResponseMessage{Action: actionSendFirstMessage, Status: "db error", Code: 502}
 						c.ch <- msg
@@ -280,10 +281,10 @@ func (c *Client) listenRead() {
 						nickname.Nickname,
 						c.room.Id,
 					)
+					rows.Close()
 					if err != nil {
 						panic(err)
 					} else {
-						log.Println(rows.Columns())
 						js, _ := json.Marshal(nickname)
 						msg := ResponseMessage{Action: actionSendNickname, Status: "OK", Code: 200, Body: js}
 						c.ch <- msg
@@ -318,6 +319,7 @@ func (c *Client) listenRead() {
 				messages := make([]Message, 0)
 				rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", c.room.Id)
 				if err != nil {
+					rows.Close()
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 					c.ch <- msg
 				} else {
@@ -331,6 +333,7 @@ func (c *Client) listenRead() {
 						m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 						messages = append(messages, m)
 					}
+					rows.Close()
 					jsonMessages, _ := json.Marshal(messages)
 					msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 					c.ch <- msg
@@ -357,6 +360,7 @@ func (c *Client) listenRead() {
 						messages := make([]Message, 0)
 						rows, err := c.server.db.Query("SELECT room, type, date, body, url FROM message where room=$1", r.Id)
 						if err != nil {
+							rows.Close()
 							msg := ResponseMessage{Action: actionGetAllMessages, Status: "Room not found", Code: 404, Body: msg.Body}
 							c.ch <- msg
 						} else {
@@ -370,6 +374,7 @@ func (c *Client) listenRead() {
 								m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 								messages = append(messages, m)
 							}
+							rows.Close()
 							jsonMessages, _ := json.Marshal(messages)
 							msg := ResponseMessage{Action: actionGetAllMessages, Status: "OK", Code: 200, Body: jsonMessages}
 							c.ch <- msg
@@ -416,6 +421,7 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 		}
 		rows, err := db.Query("SELECT room, type, date, body, url FROM message where room=$1 order by date desc limit $2", id, diff)
 		if err != nil {
+			rows.Close()
 			response.WriteHeader(http.StatusInternalServerError)
 			response.Write([]byte(err.Error()))
 		} else {
@@ -429,6 +435,7 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 				m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 				messages = append(messages, m)
 			}
+			rows.Close()
 			jsonMessages, _ := json.Marshal(messages)
 			msg := ResponseMessage{Action: "getDiff", Status: "OK", Code: 200, Body: jsonMessages}
 			js, _ := json.Marshal(msg)
