@@ -171,7 +171,8 @@ func (o *Operator) listenRead() {
 			if err == io.EOF {
 				o.doneCh <- true
 			} else if err != nil {
-				o.server.Err(err)
+				//o.server.Err(err)
+				o.doneCh <- true
 			}
 			switch msg.Action {
 

@@ -112,7 +112,8 @@ func (c *Client) listenRead() {
 			if err == io.EOF {
 				c.doneCh <- true
 			} else if err != nil {
-				c.server.Err(err)
+				c.doneCh <- true
+				//c.server.Err(err)
 			}
 			log.Println(msg)
 			switch msg.Action {
