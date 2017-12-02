@@ -140,17 +140,18 @@ func (s *Server) Listen() {
 
 	// websocket handler for client
 	onConnected := func(w http.ResponseWriter, r *http.Request) {
-		// defer func() {
-		// 	err := ws.Close()
-		// 	if err != nil {
-		// 		s.errCh <- err
-		// 	}
-		// }()
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			//log.Println(err)
-			return
+			log.Println(err)
+			//return
 		}
+		defer func() {
+			err := conn.Close()
+			if err != nil {
+				s.errCh <- err
+			}
+		}()
 
 		room := NewRoom(s)
 		client := NewClient(conn, s, room)
@@ -163,18 +164,18 @@ func (s *Server) Listen() {
 
 	// websocket handler for operator
 	onConnectedOperator := func(w http.ResponseWriter, r *http.Request) {
-		// defer func() {
-		// 	err := ws.Close()
-		// 	if err != nil {
-		// 		s.errCh <- err
-		// 	}
-		// }()
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			//log.Println(err)
-			return
+			log.Println(err)
+			// return
 		}
+		defer func() {
+			err := conn.Close()
+			if err != nil {
+				s.errCh <- err
+			}
+		}()
 		operator := NewOperator(conn, s)
 		s.AddOperator(operator)
 		operator.Listen()
