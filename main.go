@@ -28,6 +28,7 @@ func main() {
 	server.Router.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
 	server.Router.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
 	server.Router.HandleFunc("/api/v1/diff/", chat.DiffHandler)
-
-	log.Fatal(http.ListenAndServe(":8080", handlers.CORS()(server.Router)))
+	// AllowedOrigins(origins []string) CORSOption
+	corsOPT := handlers.AllowedOrigins([]string{"*"})
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(corsOPT)(server.Router)))
 }
