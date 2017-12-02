@@ -74,17 +74,19 @@ func (r *Room) listenWrite() {
 		case msg := <-r.channelForMessage:
 			log.Println("channelForMessage")
 			//r.Messages = append(r.Messages, msg)
-			_, err := r.server.db.Query(`insert into message(room, type, date, body, url) values($1, $2, $3, $4, $5)`,
+			first, err := r.server.db.Query(`insert into message(room, type, date, body, url) values($1, $2, $3, $4, $5)`,
 				r.Id,
 				msg.Author,
 				msg.Time,
 				msg.Body,
 				msg.ImageUrl,
 			)
-			_, err = r.server.db.Query(`update room set lastmessage=$1 where room=$2`,
+			first.Close()
+			second, err := r.server.db.Query(`update room set lastmessage=$1 where room=$2`,
 				msg.Body,
 				r.Id,
 			)
+			second.Close()
 			r.LastMessage = msg.Body
 			var response ResponseMessage
 			messages := make([]Message, 0)
@@ -102,6 +104,7 @@ func (r *Room) listenWrite() {
 					m := Message{Author: typeM.String, Body: body.String, Room: int(room.Int64), Time: int(date.Int64), ImageUrl: url.String}
 					messages = append(messages, m)
 				}
+				rows.Close()
 				// try new struct
 				tmp := make([]Message, len(messages))
 				copy(tmp, messages)
