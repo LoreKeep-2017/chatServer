@@ -6,6 +6,8 @@ import (
 
 	"github.com/LoreKeep-2017/chatServer/auth"
 	"github.com/LoreKeep-2017/chatServer/chat"
+
+	"github.com/gorilla/handlers"
 )
 
 func main() {
@@ -18,12 +20,14 @@ func main() {
 	// static files
 	http.Handle("/", http.FileServer(http.Dir("webroot")))
 
-	http.HandleFunc("/api/v1/register/", auth.RegisterHandler)
-	http.HandleFunc("/api/v1/login/", server.LoginHandler)
-	http.HandleFunc("/api/v1/loggedin/", server.LoggedinHandler)
-	http.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
-	http.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
-	http.HandleFunc("/api/v1/diff/", chat.DiffHandler)
+	//r := mux.NewRouter()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	server.Router.HandleFunc("/api/v1/register/", auth.RegisterHandler)
+	server.Router.HandleFunc("/api/v1/login/", server.LoginHandler)
+	server.Router.HandleFunc("/api/v1/loggedin/", server.LoggedinHandler)
+	server.Router.HandleFunc("/api/v1/logout/", auth.LogoutHandler)
+	server.Router.HandleFunc("/api/v1/greating/", auth.GreatingHandler)
+	server.Router.HandleFunc("/api/v1/diff/", chat.DiffHandler)
+
+	log.Fatal(http.ListenAndServe(":8080", handlers.CORS()(server.Router)))
 }

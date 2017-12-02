@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 
@@ -21,6 +22,7 @@ const (
 
 // Chat server.
 type Server struct {
+	Router *mux.Router
 	//сообщения
 	messages []*Message
 	//типы пользователей
@@ -45,6 +47,7 @@ type Server struct {
 
 // Create new chat server.
 func NewServer() *Server {
+	r := mux.NewRouter()
 	messages := []*Message{}
 	operators := make(map[int]*Operator)
 	rooms := make(map[int]*Room)
@@ -65,6 +68,7 @@ func NewServer() *Server {
 	}
 
 	return &Server{
+		r,
 		messages,
 		operators,
 		rooms,
