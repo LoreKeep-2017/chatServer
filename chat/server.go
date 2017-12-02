@@ -186,8 +186,8 @@ func (s *Server) Listen() {
 	}
 	// websocket.
 	// 	http.HandleF
-	http.HandleFunc(clientHandlerPattern, onConnected)
-	http.HandleFunc(operatorHandlerPattern, onConnectedOperator)
+	s.Router.HandleFunc(clientHandlerPattern, onConnected)
+	s.Router.HandleFunc(operatorHandlerPattern, onConnectedOperator)
 	//http.Handle(clientHandlerPattern, onConnected)
 	//http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
 	log.Println("Created handlers")
