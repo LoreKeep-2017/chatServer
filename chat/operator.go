@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/websocket"
+	//"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 const operatorChannelBufSize = 100
@@ -52,10 +53,12 @@ func (o *Operator) sendChangeStatus(room Room) {
 	jsonstring, err := json.Marshal(room)
 	if !CheckError(err, "Invalid RawData", false) {
 		msg := ResponseMessage{Action: actionChangeStatusRooms, Status: "Server error", Code: 502}
-		websocket.JSON.Send(o.ws, msg)
+		websocket.WriteJSON(o.ws, msg)
+		//websocket.JSON.Send(o.ws, msg)
 	}
 	msg := ResponseMessage{Action: actionChangeStatusRooms, Status: "OK", Code: 200, Body: jsonstring}
-	websocket.JSON.Send(o.ws, msg)
+	websocket.WriteJSON(o.ws, msg)
+	//websocket.JSON.Send(o.ws, msg)
 }
 
 func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
@@ -135,7 +138,8 @@ func (o *Operator) listenWrite() {
 		case msg := <-o.ch:
 			log.Println(o.ws, msg)
 			if o.ws != nil {
-				websocket.JSON.Send(o.ws, msg)
+				websocket.WriteJSON(o.ws, msg)
+				//websocket.JSON.Send(o.ws, msg)
 			}
 
 		// receive done request
@@ -162,7 +166,8 @@ func (o *Operator) listenRead() {
 		// read data from websocket connection
 		default:
 			var msg RequestMessage
-			err := websocket.JSON.Receive(o.ws, &msg)
+			err := websocket.ReadJSON(o.ws, &msg)
+			//err := websocket.JSON.Receive(o.ws, &msg)
 			if err == io.EOF {
 				o.doneCh <- true
 			} else if err != nil {

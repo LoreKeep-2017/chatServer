@@ -11,9 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/LoreKeep-2017/chatServer/db"
+	"github.com/gorilla/websocket"
 
-	"golang.org/x/net/websocket"
+	"github.com/LoreKeep-2017/chatServer/db"
+	//"golang.org/x/net/websocket"
 )
 
 const channelBufSize = 100
@@ -76,7 +77,8 @@ func (c *Client) listenWrite() {
 		case msg := <-c.ch:
 			log.Println("Send:", msg, c.ws)
 			if c.ws != nil {
-				websocket.JSON.Send(c.ws, msg)
+				websocket.WriteJSON(c.ws, msg)
+				//websocket.JSON.Send(c.ws, msg)
 			}
 
 		// receive done request
@@ -105,7 +107,8 @@ func (c *Client) listenRead() {
 		// read data from websocket connection
 		default:
 			var msg RequestMessage
-			err := websocket.JSON.Receive(c.ws, &msg)
+			err := websocket.ReadJSON(c.ws, &msg)
+			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				c.doneCh <- true
 			} else if err != nil {

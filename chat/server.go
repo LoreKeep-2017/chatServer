@@ -7,10 +7,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 
 	"github.com/LoreKeep-2017/chatServer/db"
-	"golang.org/x/net/websocket"
+	//"golang.org/x/net/websocket"
 )
 
 const (
@@ -126,6 +127,11 @@ func (s *Server) sendMessageToOperator(id int, action string, jsonstring []byte)
 	operator.ch <- msg
 }
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (s *Server) Listen() {
@@ -133,16 +139,21 @@ func (s *Server) Listen() {
 	log.Println("Listening server...")
 
 	// websocket handler for client
-	onConnected := func(ws *websocket.Conn) {
-		defer func() {
-			err := ws.Close()
-			if err != nil {
-				s.errCh <- err
-			}
-		}()
+	onConnected := func(w http.ResponseWriter, r *http.Request) {
+		// defer func() {
+		// 	err := ws.Close()
+		// 	if err != nil {
+		// 		s.errCh <- err
+		// 	}
+		// }()
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			//log.Println(err)
+			return
+		}
 
 		room := NewRoom(s)
-		client := NewClient(ws, s, room)
+		client := NewClient(conn, s, room)
 		room.Client = client
 		s.rooms[room.Id] = room
 		s.Add(client)
@@ -151,20 +162,29 @@ func (s *Server) Listen() {
 	}
 
 	// websocket handler for operator
-	onConnectedOperator := func(ws *websocket.Conn) {
-		defer func() {
-			err := ws.Close()
-			if err != nil {
-				s.errCh <- err
-			}
-		}()
+	onConnectedOperator := func(w http.ResponseWriter, r *http.Request) {
+		// defer func() {
+		// 	err := ws.Close()
+		// 	if err != nil {
+		// 		s.errCh <- err
+		// 	}
+		// }()
 
-		operator := NewOperator(ws, s)
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			//log.Println(err)
+			return
+		}
+		operator := NewOperator(conn, s)
 		s.AddOperator(operator)
 		operator.Listen()
 	}
-	http.Handle(clientHandlerPattern, websocket.Handler(onConnected))
-	http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
+	// websocket.
+	// 	http.HandleF
+	http.HandleFunc(clientHandlerPattern, onConnected)
+	http.HandleFunc(operatorHandlerPattern, onConnectedOperator)
+	//http.Handle(clientHandlerPattern, onConnected)
+	//http.Handle(operatorHandlerPattern, websocket.Handler(onConnectedOperator))
 	log.Println("Created handlers")
 
 	for {
