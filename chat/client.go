@@ -101,7 +101,6 @@ func (c *Client) listenRead() {
 
 		// receive done request
 		case <-c.doneCh:
-			c.room.channelForStatus <- roomClose
 			c.server.Del(c)
 			c.doneCh <- true // for listenWrite method
 			return
@@ -113,11 +112,9 @@ func (c *Client) listenRead() {
 			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				log.Println(err.Error())
-				c.room.channelForStatus <- roomClose
 				c.doneCh <- true
 			} else if err != nil {
 				log.Println(err.Error())
-				c.room.channelForStatus <- roomClose
 				c.doneCh <- true
 				//c.server.Err(err)
 			}
