@@ -50,7 +50,8 @@ func NewClient(ws *websocket.Conn, server *Server, room *Room) *Client {
 	doneCh := make(chan bool)
 	addRoomCh := make(chan *Room)
 	delRoomCh := make(chan *Room)
-	return &Client{Id: maxId, ws: ws, server: server, room: room, ch: ch, doneCh: doneCh, addRoomCh: addRoomCh, delRoomCh: delRoomCh}
+	nick := "User_" + strconv.Itoa(room.Id)
+	return &Client{Id: maxId, ws: ws, server: server, room: room, ch: ch, doneCh: doneCh, addRoomCh: addRoomCh, delRoomCh: delRoomCh, Nick: nick}
 }
 
 func (c *Client) Conn() *websocket.Conn {
@@ -100,6 +101,7 @@ func (c *Client) listenRead() {
 
 		// receive done request
 		case <-c.doneCh:
+			c.room.channelForStatus <- roomClose
 			c.server.Del(c)
 			c.doneCh <- true // for listenWrite method
 			return
@@ -111,9 +113,11 @@ func (c *Client) listenRead() {
 			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				log.Println(err.Error())
+				c.room.channelForStatus <- roomClose
 				c.doneCh <- true
 			} else if err != nil {
 				log.Println(err.Error())
+				c.room.channelForStatus <- roomClose
 				c.doneCh <- true
 				//c.server.Err(err)
 			}
