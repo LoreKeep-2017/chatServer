@@ -101,6 +101,7 @@ func (c *Client) listenRead() {
 
 		// receive done request
 		case <-c.doneCh:
+			c.room.channelForStatus <- roomClose
 			c.server.Del(c)
 			c.doneCh <- true // for listenWrite method
 			return
