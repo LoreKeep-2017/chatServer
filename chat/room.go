@@ -156,7 +156,9 @@ func (r *Room) listenWrite() {
 
 			}
 			log.Println("chsnge status!!!")
-			if msg == roomRecieved || msg == roomSend {
+			if msg == roomClose {
+				//
+			} else if msg == roomRecieved || msg == roomSend {
 				r.server.sendMessageToOperator(r.Operator.Id, actionChangeStatusRooms, jsonstring)
 			} else {
 				r.server.broadcast(response)
