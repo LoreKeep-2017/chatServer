@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strconv"
 )
 
 const (
@@ -44,6 +45,15 @@ func NewRoom(server *Server) *Room {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	second, err := server.db.Query(`update room set nickname=$1 where room=$2`,
+		"User_"+strconv.Itoa(roomId),
+		roomId,
+	)
+	if err != nil {
+		second.Close()
+	}
+	second.Close()
 
 	ch := make(chan Message, roomChannelBufSize)
 	channelForStatus := make(chan string, roomChannelBufSize)
