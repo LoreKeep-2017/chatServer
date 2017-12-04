@@ -278,6 +278,7 @@ func (o *Operator) listenRead() {
 						f, err := os.OpenFile(fileUrl, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
+							f.Close()
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 							o.ch <- msg
 							break
@@ -288,12 +289,12 @@ func (o *Operator) listenRead() {
 								o.ch <- msg
 								break
 							}
-							err = f.Close()
-							if err != nil {
-								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
-								o.ch <- msg
-								break
-							}
+							// err = f.Close()
+							// if err != nil {
+							// 	msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
+							// 	o.ch <- msg
+							// 	break
+							// }
 							//_, err = f.Write(message.Image)
 							message.ImageUrl = fileDBurl
 						}

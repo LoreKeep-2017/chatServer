@@ -161,6 +161,7 @@ func (c *Client) listenRead() {
 						//os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
+							f.Close()
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
 							c.ch <- msg
 							break
@@ -171,12 +172,12 @@ func (c *Client) listenRead() {
 								c.ch <- msg
 								break
 							}
-							err = f.Close()
-							if err != nil {
-								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
-								c.ch <- msg
-								break
-							}
+							// err = f.Close()
+							// if err != nil {
+							// 	msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
+							// 	c.ch <- msg
+							// 	break
+							// }
 							//_, err = f.Write([]byte(img))
 							message.ImageUrl = fileDBurl
 						}
@@ -227,6 +228,7 @@ func (c *Client) listenRead() {
 						//os.Chown(fileUrl, osUid, grUid)
 						//os.Chmod(fileUrl, 7777)
 						if err != nil {
+							f.Close()
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
 							c.ch <- msg
 							break
@@ -237,12 +239,12 @@ func (c *Client) listenRead() {
 								c.ch <- msg
 								break
 							}
-							err = f.Close()
-							if err != nil {
-								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
-								c.ch <- msg
-								break
-							}
+							// err = f.Close()
+							// if err != nil {
+							// 	msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error: " + err.Error(), Code: 500}
+							// 	c.ch <- msg
+							// 	break
+							// }
 							//_, err = f.Write(message.Image)
 							message.ImageUrl = fileDBurl
 						}

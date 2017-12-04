@@ -47,5 +47,6 @@ func convertString(str string, format string, dest *os.File) error {
 		}
 		return gif.Encode(dest, im, &opt)
 	}
+	dest.Close()
 	return errors.New("format only jpeg/gif/png")
 }
