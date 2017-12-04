@@ -166,7 +166,7 @@ func (c *Client) listenRead() {
 							c.ch <- msg
 							break
 						} else {
-							err := convertString(message.Image, message.ImageFormat, f)
+							go convertString(message.Image, message.ImageFormat, f)
 							if err != nil {
 								msg := ResponseMessage{Action: actionSendMessage, Status: "Save image error", Code: 500}
 								c.ch <- msg
