@@ -50,7 +50,7 @@ func NewClient(ws *websocket.Conn, server *Server, room *Room) *Client {
 	doneCh := make(chan bool)
 	addRoomCh := make(chan *Room)
 	delRoomCh := make(chan *Room)
-	nick := "User_" + strconv.Itoa(room.Id)
+	nick := "User_" + strconv.Itoa((*room).Id)
 	return &Client{Id: maxId, ws: ws, server: server, room: room, ch: ch, doneCh: doneCh, addRoomCh: addRoomCh, delRoomCh: delRoomCh, Nick: nick}
 }
 
