@@ -441,7 +441,8 @@ func DiffHandler(response http.ResponseWriter, request *http.Request) {
 				messages = append(messages, m)
 			}
 			rows.Close()
-			jsonMessages, _ := json.Marshal(messages)
+			r := Room{Messages: messages}
+			jsonMessages, _ := json.Marshal(r)
 			msg := ResponseMessage{Action: "getDiff", Status: "OK", Code: 200, Body: jsonMessages}
 			js, _ := json.Marshal(msg)
 			response.Header().Set("Access-Control-Allow-Origin", "*")
