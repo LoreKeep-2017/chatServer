@@ -82,7 +82,7 @@ func (r *Room) listenWrite() {
 
 		// отправка сообщений участникам комнаты
 		case msg := <-r.channelForMessage:
-			log.Println("channelForMessage")
+			// log.Println("channelForMessage")
 			//r.Messages = append(r.Messages, msg)
 			first, err := r.server.db.Query(`insert into message(room, type, date, body, url) values($1, $2, $3, $4, $5)`,
 				r.Id,
@@ -127,7 +127,7 @@ func (r *Room) listenWrite() {
 			if msg.Author == "client" && r.Operator != nil {
 				r.channelForStatus <- roomRecieved
 			}
-			log.Println(response)
+			// log.Println(response)
 			if r.Client != nil {
 				r.Client.ch <- response
 			}
@@ -155,7 +155,7 @@ func (r *Room) listenWrite() {
 				response.Body = jsonstring
 
 			}
-			log.Println("chsnge status!!!")
+			// log.Println("chsnge status!!!")
 			if msg == roomClose {
 				//
 			} else if msg == roomRecieved || msg == roomSend {

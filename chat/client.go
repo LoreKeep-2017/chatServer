@@ -76,7 +76,7 @@ func (c *Client) listenWrite() {
 
 		// send message to the client
 		case msg := <-c.ch:
-			log.Println("Send:", msg, c.ws)
+			// log.Println("Send:", msg, c.ws)
 			if c.ws != nil {
 				websocket.WriteJSON(c.ws, msg)
 				//websocket.JSON.Send(c.ws, msg)
@@ -96,7 +96,7 @@ func (c *Client) listenWrite() {
 
 // Listen read request via chanel
 func (c *Client) listenRead() {
-	log.Println("Listening read from client")
+	// log.Println("Listening read from client")
 	for {
 		select {
 
@@ -113,19 +113,19 @@ func (c *Client) listenRead() {
 			err := websocket.ReadJSON(c.ws, &msg)
 			//err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
-				log.Println(err.Error())
+				// log.Println(err.Error())
 				c.doneCh <- true
 			} else if err != nil {
-				log.Println(err.Error())
+				// log.Println(err.Error())
 				c.doneCh <- true
 				//c.server.Err(err)
 			}
-			log.Println(msg)
+			// log.Println(msg)
 			switch msg.Action {
 
 			//отправка сообщений
 			case actionSendMessage:
-				log.Println(actionSendMessage)
+				// log.Println(actionSendMessage)
 				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -190,7 +190,7 @@ func (c *Client) listenRead() {
 
 				//отправка сообщений
 			case actionSendFirstMessage:
-				log.Println(actionSendFirstMessage)
+				// log.Println(actionSendFirstMessage)
 				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -268,13 +268,13 @@ func (c *Client) listenRead() {
 
 			//закрытие комнаты
 			case actionCloseRoom:
-				log.Println(actionCloseRoom)
+				// log.Println(actionCloseRoom)
 				c.room.Status = roomClose
 				c.room.channelForStatus <- roomClose
 
 			//
 			case actionSendNickname:
-				log.Println(actionSendNickname)
+				// log.Println(actionSendNickname)
 				var nickname ClientNickname
 				err := json.Unmarshal(msg.Body, &nickname)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -303,11 +303,11 @@ func (c *Client) listenRead() {
 
 				//
 			case actionGetNickname:
-				log.Println(actionGetNickname)
+				// log.Println(actionGetNickname)
 				var nickname sql.NullString
-				log.Println(c.room.Id)
+				// log.Println(c.room.Id)
 				_ = c.server.db.QueryRow("SELECT nickname FROM room WHERE room=?", c.room.Id).Scan(&nickname)
-				log.Println(nickname)
+				// log.Println(nickname)
 				var n ClientNickname
 				n.Nickname = c.Nick
 				js, _ := json.Marshal(n)
@@ -346,7 +346,7 @@ func (c *Client) listenRead() {
 				//c.ch <- response
 
 			case actionRestoreRoom:
-				log.Println(actionRestoreRoom)
+				// log.Println(actionRestoreRoom)
 				var room ClientRoom
 				err := json.Unmarshal(msg.Body, &room)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {

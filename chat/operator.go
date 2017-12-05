@@ -83,11 +83,11 @@ func (o *Operator) searchRoomByStatus(typeRoom string) map[int]Room {
 		var date sql.NullInt64
 		var lastMessgae sql.NullString
 		var note sql.NullString
-		log.Println()
+		// log.Println()
 		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &note, &nickname)
-		log.Println(lastMessgae)
+		// log.Println(lastMessgae)
 		r := Room{Id: int(room.Int64), Status: status.String, Time: int(date.Int64), Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: int(operator.Int64)}, Client: &Client{Nick: nickname.String}, Note: note.String}
-		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
+		// log.Println(r.Time, r.Id, r.Status, r.LastMessage)
 		result[int(room.Int64)] = r
 	}
 	return result
@@ -114,11 +114,11 @@ func (o *Operator) searchInRoom(typeRoom string, pattern string) map[int]Room {
 		var operator int
 		var date int                   //int
 		var lastMessgae sql.NullString //string
-		log.Println()
+		// log.Println()
 		_ = rows.Scan(&room, &description, &date, &status, &lastMessgae, &operator, &nickname)
-		log.Println(lastMessgae)
+		// log.Println(lastMessgae)
 		r := Room{Id: room, Status: status.String, Time: date, Description: description.String, LastMessage: lastMessgae.String, Operator: &Operator{Id: operator}, Client: &Client{Nick: nickname.String}}
-		log.Println(r.Time, r.Id, r.Status, r.LastMessage)
+		// log.Println(r.Time, r.Id, r.Status, r.LastMessage)
 		result[room] = r
 	}
 	return result
@@ -138,7 +138,7 @@ func (o *Operator) listenWrite() {
 
 		// send message to the operator
 		case msg := <-o.ch:
-			log.Println(o.ws, msg)
+			// log.Println(o.ws, msg)
 			if o.ws != nil {
 				websocket.WriteJSON(o.ws, msg)
 				//websocket.JSON.Send(o.ws, msg)
@@ -155,7 +155,7 @@ func (o *Operator) listenWrite() {
 
 // Listen read request via chanel
 func (o *Operator) listenRead() {
-	log.Println("Listening read from client")
+	// log.Println("Listening read from client")
 	for {
 		select {
 
@@ -180,31 +180,31 @@ func (o *Operator) listenRead() {
 
 			//получение всех клиентов
 			case actionGetAllRooms:
-				log.Println(actionGetAllRooms)
+				// log.Println(actionGetAllRooms)
 				response := OperatorResponseRooms{o.server.rooms, len(o.server.rooms)}
 				jsonstring1, _ := json.Marshal(response)
-				log.Println(jsonstring1)
+				// log.Println(jsonstring1)
 				msg := ResponseMessage{Action: actionGetAllRooms, Status: "OK", Code: 200, Body: jsonstring1}
 				o.ch <- msg
 
 			//вход в комнату
 			case actionEnterRoom:
-				log.Println(actionEnterRoom)
+				// log.Println(actionEnterRoom)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
 					msg := ResponseMessage{Action: actionEnterRoom, Status: "Invalid Request", Code: 403}
 					o.ch <- msg
 				}
-				log.Println("if clause")
+				// log.Println("if clause")
 				if room, ok := o.server.rooms[rID.ID]; ok {
-					log.Println(ok)
+					// log.Println(ok)
 					room.Status = roomRecieved
 					room.Operator = o
 					o.rooms[room.Id] = room
 					jsonstring, _ := json.Marshal(room)
-					log.Println(room)
-					log.Println(o.server.db)
+					// log.Println(room)
+					// log.Println(o.server.db)
 
 					rows1, dberr := o.server.db.Query(`UPDATE operator SET rooms = array_append(rooms,$1) WHERE id=$2`,
 						room.Id,
@@ -246,7 +246,7 @@ func (o *Operator) listenRead() {
 
 			//отправка сообщения
 			case actionSendMessage:
-				log.Println(actionSendMessage)
+				// log.Println(actionSendMessage)
 				var message Message
 				err := json.Unmarshal(msg.Body, &message)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -257,7 +257,7 @@ func (o *Operator) listenRead() {
 				message.Author = "operator"
 				room, ok := o.rooms[message.Room]
 				if ok {
-					log.Println(message)
+					// log.Println(message)
 					if message.Image != "" {
 						if message.ImageFormat == "" {
 							msg := ResponseMessage{Action: actionSendMessage, Status: "Bad request, image format must be jpg/jpeg/svg/png/gif", Code: 400}
@@ -307,7 +307,7 @@ func (o *Operator) listenRead() {
 
 			//получение всех сообщений
 			case actionGetAllMessages:
-				log.Println(actionGetAllMessages)
+				// log.Println(actionGetAllMessages)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -339,7 +339,7 @@ func (o *Operator) listenRead() {
 
 				//
 			case actionRoomStatusSend:
-				log.Println(actionRoomStatusSend)
+				// log.Println(actionRoomStatusSend)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -364,7 +364,7 @@ func (o *Operator) listenRead() {
 
 			//закрытие комнаты
 			case actionCloseRoom:
-				log.Println(actionCloseRoom)
+				// log.Println(actionCloseRoom)
 				var rID RequestActionWithRoom
 				err := json.Unmarshal(msg.Body, &rID)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -399,7 +399,7 @@ func (o *Operator) listenRead() {
 
 			//получение комнаты по статусу
 			case actionGetRoomsByStatus:
-				log.Println(actionGetRoomsByStatus)
+				// log.Println(actionGetRoomsByStatus)
 				var typeRoom RequestTypeRooms
 				err := json.Unmarshal(msg.Body, &typeRoom)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -415,7 +415,7 @@ func (o *Operator) listenRead() {
 
 			//получение комнаты по статусу
 			case actionSearch:
-				log.Println(actionSearch)
+				// log.Println(actionSearch)
 				var typeRoom RequestTypeRooms
 				err := json.Unmarshal(msg.Body, &typeRoom)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
@@ -431,7 +431,7 @@ func (o *Operator) listenRead() {
 
 			//получение списка операторов
 			case actionGetOperators:
-				log.Println(actionGetOperators)
+				// log.Println(actionGetOperators)
 				// _, err := o.server.db.Query("SELECT id, nickname, fio FROM operator")
 				// if err != nil {
 				// 	msg := ResponseMessage{Action: actionGetOperators, Status: "Invalid Request", Code: 400}
@@ -455,7 +455,7 @@ func (o *Operator) listenRead() {
 				// }
 
 			case actionSendID:
-				log.Println(actionSendID)
+				// log.Println(actionSendID)
 				var id OperatorId
 				err := json.Unmarshal(msg.Body, &id)
 				if err == nil {
@@ -476,7 +476,7 @@ func (o *Operator) listenRead() {
 					}
 					for rows.Next() {
 						var room int
-						log.Println()
+						// log.Println()
 						_ = rows.Scan(&room)
 						if apR, ok := o.server.rooms[room]; ok {
 							apR.Operator = o
@@ -491,7 +491,7 @@ func (o *Operator) listenRead() {
 				}
 
 			case actionChangeOperator:
-				log.Println(actionChangeOperator)
+				// log.Println(actionChangeOperator)
 				var operatorChange OperatorChange
 				err := json.Unmarshal(msg.Body, &operatorChange)
 				if err == nil {
@@ -539,8 +539,8 @@ func (o *Operator) listenRead() {
 
 				//
 			case actionSendNote:
-				log.Println(actionSendNote)
-				log.Println(o.rooms)
+				// log.Println(actionSendNote)
+				// log.Println(o.rooms)
 				var note OperatorNote
 				err := json.Unmarshal(msg.Body, &note)
 				if !CheckError(err, "Invalid RawData"+string(msg.Body), false) {
